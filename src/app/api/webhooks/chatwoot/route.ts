@@ -54,7 +54,7 @@ export async function POST(request: Request) {
         payload_json: payloadJson,
         headers_json: headersJson,
         trace_id: traceId,
-        status: isDuplicate ? 'IGNORED' : 'PENDING'
+        status: isDuplicate ? 'PROCESSED' : 'PENDING'
       }
     });
 

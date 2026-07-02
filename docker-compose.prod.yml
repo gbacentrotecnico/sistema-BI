@@ -11,6 +11,15 @@ services:
     environment:
       - NODE_ENV=production
     restart: always
+    networks:
+      - network_swarm_public
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.sistema_bi.rule=Host(`relatorios.gbamecanica.com.br`)"
+        - "traefik.http.routers.sistema_bi.entrypoints=websecure"
+        - "traefik.http.routers.sistema_bi.tls.certresolver=letsencryptresolver"
+        - "traefik.http.services.sistema_bi.loadbalancer.server.port=3000"
 
   worker:
     image: gbacentrotecnico/sistema-bi:latest
@@ -21,3 +30,10 @@ services:
     environment:
       - NODE_ENV=production
     restart: always
+    networks:
+      - network_swarm_public
+
+networks:
+  network_swarm_public:
+    external: true
+

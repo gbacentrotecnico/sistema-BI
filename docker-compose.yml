@@ -1,0 +1,48 @@
+version: "3.7"
+
+services:
+  postgres:    
+    image: pgvector/pgvector:pg16
+    container_name: bi_postgres
+    environment:
+      - POSTGRES_PASSWORD=gbamecanica010203
+      - TZ=America/Sao_Paulo      
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - network_swarm_public    
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == Database-abucci01  
+
+  redis:
+    image: redis:latest
+    container_name: bi_redis
+    command: [
+        "redis-server",
+        "--appendonly",
+        "yes",
+        "--port",
+        "6379",
+        "--requirepass",
+        "gbamecanica010203"
+      ]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - network_swarm_public
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  network_swarm_public:
+    driver: bridge

@@ -1,0 +1,454 @@
+generator client {
+  provider   = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ==========================================
+// ENUMS
+// ==========================================
+enum RawEventStatus {
+  PENDING
+  PROCESSING
+  PROCESSED
+  FAILED
+  RETRYING
+}
+
+enum AiJobStatus {
+  PENDING
+  PROCESSING
+  DONE
+  FAILED
+}
+
+enum AiProvider {
+  OPENAI
+  OPENROUTER
+  GOOGLE
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum MessageDeliveryStatus {
+  READ
+  DELIVERED
+  FAILED
+}
+
+// ==========================================
+// 1. RAW & INGESTION LAYER
+// ==========================================
+
+model Integration {
+  id          Int          @id @default(autoincrement())
+  nome        String
+  tipo        String       
+  provider    String?
+  status      String
+  version     String?
+  config_json Json?
+  
+  created_at  DateTime     @default(now())
+  updated_at  DateTime     @updatedAt
+}
+
+model RawEvent {
+  id             Int        @id @default(autoincrement())
+  integration_id Int
+  source         String     
+  event_type     String
+  external_id    String?
+  payload_json   Json
+  headers_json   Json?
+  
+  status         RawEventStatus @default(PENDING)
+  retry_count    Int            @default(0)
+  last_error     String?
+  next_retry_at  DateTime?
+
+  received_at    DateTime   @default(now())
+  processed_at   DateTime?
+  trace_id       String?
+  
+  webhook_log    WebhookLog?
+  dead_letters   DeadLetter[]
+}
+
+model WebhookLog {
+  id                 Int         @id @default(autoincrement())
+  raw_event_id       Int         @unique
+  raw_event          RawEvent    @relation(fields: [raw_event_id], references: [id])
+  
+  source             String
+  event              String
+  payload_hash       String      @unique
+  headers_json       Json?
+  payload_json       Json
+  status             String      
+  error              String?
+  trace_id           String?
+  http_status        Int?
+  ip                 String?
+  user_agent         String?
+  processing_time_ms Int?
+  
+  received_at        DateTime    @default(now())
+  processed_at       DateTime?
+  retry_count        Int         @default(0)
+
+  @@index([payload_hash])
+  @@index([status])
+}
+
+model DeadLetter {
+  id               Int       @id @default(autoincrement())
+  raw_event_id     Int
+  raw_event        RawEvent  @relation(fields: [raw_event_id], references: [id])
+  reason           String
+  retry_count      Int       @default(0)
+  next_retry_at    DateTime?
+  last_error       String?
+  worker_name      String?
+  stacktrace       String?
+  resolved         Boolean   @default(false)
+  resolved_at      DateTime?
+  resolved_by      String?
+  resolution_notes String?
+  payload_json     Json
+  created_at       DateTime  @default(now())
+}
+
+model IntegrationExecution {
+  id             Int      @id @default(autoincrement())
+  integration_id Int
+  started_at     DateTime
+  finished_at    DateTime?
+  status         String
+  records        Int      @default(0)
+  errors         Int      @default(0)
+  duration_ms    Int?
+  worker_name    String
+}
+
+// ==========================================
+// 2. CORE DOMAIN LAYER
+// ==========================================
+
+model Loja {
+  id            Int            @id @default(autoincrement())
+  codigo        String         @unique 
+  nome          String
+  
+  inboxes       Inbox[]
+  oportunidades Oportunidade[]
+  
+  schema_version       Int            @default(1)
+  aggregate_version    Int            @default(1)
+  integration_version  Int            @default(1)
+  created_at           DateTime       @default(now())
+  updated_at           DateTime       @updatedAt
+  created_by           String?
+  updated_by           String?
+}
+
+model Inbox {
+  id                Int        @id @default(autoincrement())
+  loja_id           Int
+  loja              Loja       @relation(fields: [loja_id], references: [id])
+  nome              String     
+  chatwoot_inbox_id String     @unique
+  
+  conversas         Conversa[]
+
+  schema_version    Int        @default(1)
+  aggregate_version Int        @default(1)
+  integration_version Int      @default(1)
+  created_at        DateTime   @default(now())
+  updated_at        DateTime   @updatedAt
+}
+
+model Tele {
+  id                     Int            @id @default(autoincrement())
+  nome                   String
+  tipo                   String         
+  clientes_captados      Cliente[]      @relation("TeleOriginal")
+  oportunidades_fechadas Oportunidade[] @relation("TeleConversao")
+  conversas_responsaveis Conversa[]     @relation("TeleResponsavel")
+  
+  schema_version         Int            @default(1)
+  aggregate_version      Int            @default(1)
+  integration_version    Int            @default(1)
+  created_at             DateTime       @default(now())
+  updated_at             DateTime       @updatedAt
+  created_by             String?
+  updated_by             String?
+}
+
+model Cliente {
+  id               Int            @id @default(autoincrement())
+  telefone         String         @unique 
+  nome             String?
+  
+  tele_original_id Int?
+  tele_original    Tele?          @relation("TeleOriginal", fields: [tele_original_id], references: [id])
+  
+  conversas        Conversa[]
+  oportunidades    Oportunidade[]
+  eventos          Evento[]
+  
+  schema_version   Int            @default(1)
+  aggregate_version Int           @default(1)
+  integration_version Int         @default(1)
+  created_at       DateTime       @default(now())
+  updated_at       DateTime       @updatedAt
+  created_by       String?
+  updated_by       String?
+
+  @@index([tele_original_id])
+}
+
+model Conversa {
+  id                    Int           @id @default(autoincrement())
+  chatwoot_id           String        @unique
+  
+  cliente_id            Int
+  cliente               Cliente       @relation(fields: [cliente_id], references: [id])
+  
+  inbox_id              Int
+  inbox                 Inbox         @relation(fields: [inbox_id], references: [id])
+  
+  tele_responsavel_id   Int?
+  tele_responsavel      Tele?         @relation("TeleResponsavel", fields: [tele_responsavel_id], references: [id])
+  
+  mensagens             Mensagem[]
+  oportunidade          Oportunidade? 
+  eventos               Evento[]
+  
+  // Controle de SLA e Duração (Time-Aware)
+  primeira_resposta_em       DateTime?
+  ultima_resposta_em         DateTime?
+  first_agent_reply_at       DateTime?
+  last_message_at            DateTime?
+  last_customer_message_at   DateTime?
+  last_agent_message_at      DateTime?
+  closed_at                  DateTime?
+  reopened_at                DateTime?
+  waiting_since              DateTime?
+  assigned_at                DateTime?
+  encerrada_em               DateTime?
+  
+  resolution_time_seconds    Int?
+  response_time_seconds      Int?
+  tempo_primeira_resposta    Int?        
+  tempo_total                Int?          
+  
+  quantidade_mensagens       Int @default(0)
+  quantidade_agentes         Int @default(0)
+  quantidade_clientes        Int @default(0)
+  status_atual               String @default("ABERTA")
+
+  // Campos Antigos/Migrados
+  cupom_erp             String?       
+  etiquetas             String[]      
+  iniciado_em           DateTime
+  
+  // Preparação IA
+  ai_processado         Boolean       @default(false)
+  ai_processado_em      DateTime?
+  ai_resumo             Json?
+  
+  schema_version        Int           @default(1)
+  aggregate_version     Int           @default(1)
+  integration_version   Int           @default(1)
+  created_at            DateTime      @default(now())
+  updated_at            DateTime      @updatedAt
+  created_by            String?
+  updated_by            String?
+
+  @@index([iniciado_em])
+  @@index([tele_responsavel_id])
+  @@index([inbox_id])
+}
+
+model Mensagem {
+  id                  Int       @id @default(autoincrement())
+  chatwoot_message_id String    @unique
+  
+  conversation_id     Int
+  conversa            Conversa  @relation(fields: [conversation_id], references: [id])
+  
+  sender_type         String    
+  message_type        String    
+  direction           MessageDirection @default(INBOUND)
+  delivery_status     MessageDeliveryStatus?
+  content             String?
+  content_type        String?
+  private             Boolean   @default(false)
+  reply_to            String?
+  
+  attachments         Json?
+  mime_type           String?
+  media_url           String?
+  
+  payload_json        Json?     
+  
+  eventos             Evento[]
+
+  // Preparação IA
+  embedding_status      String    @default("PENDING")
+  summary_status        String    @default("PENDING")
+  sentiment_status      String    @default("PENDING")
+  classification_status String    @default("PENDING")
+
+  schema_version      Int       @default(1)
+  aggregate_version   Int       @default(1)
+  integration_version Int       @default(1)
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
+}
+
+model Cupom {
+  id             Int           @id @default(autoincrement())
+  codigo         String        @unique 
+  utilizado      Boolean       @default(false)
+  
+  oportunidade   Oportunidade? 
+  eventos        Evento[]
+  
+  schema_version Int           @default(1)
+  aggregate_version Int        @default(1)
+  integration_version Int      @default(1)
+  created_at     DateTime      @default(now())
+  updated_at     DateTime      @updatedAt
+  created_by     String?
+  updated_by     String?
+}
+
+model Oportunidade {
+  id                 Int       @id @default(autoincrement())
+  
+  cliente_id         Int
+  cliente            Cliente   @relation(fields: [cliente_id], references: [id])
+  
+  loja_id            Int
+  loja               Loja      @relation(fields: [loja_id], references: [id])
+  
+  tele_conversao_id  Int?
+  tele_conversao     Tele?     @relation("TeleConversao", fields: [tele_conversao_id], references: [id])
+  
+  conversa_id        Int?      @unique
+  conversa           Conversa? @relation(fields: [conversa_id], references: [id])
+  
+  cupom_id           Int?      @unique
+  cupom              Cupom?    @relation(fields: [cupom_id], references: [id])
+  
+  eventos            Evento[]
+
+  aprovado_em        DateTime?
+  agendado_em        DateTime?
+  status             String    @default("AGENDADA")
+  valor_faturamento  Decimal?  @db.Decimal(10,2)
+  observacoes        String?
+  
+  schema_version     Int       @default(1)
+  aggregate_version  Int       @default(1)
+  integration_version Int      @default(1)
+  created_at         DateTime  @default(now())
+  updated_at         DateTime  @updatedAt
+  created_by         String?
+  updated_by         String?
+
+  @@index([status])
+  @@index([loja_id])
+}
+
+// ==========================================
+// 3. EVENT STORE (SSOT DA INTELIGÊNCIA)
+// ==========================================
+
+model Evento {
+  id                Int      @id @default(autoincrement())
+  tipo              String   
+  aggregate_type    String
+  aggregate_id      String
+  
+  schema_version    Int      @default(1)
+  aggregate_version Int      @default(1)
+  integration       String
+  origin            String   
+  
+  hostname          String?
+  worker_name       String?
+  processing_time_ms Int?
+  
+  trace_id          String?
+  correlation_id    String?
+  causation_id      String?
+  
+  cliente_id        Int?
+  cliente           Cliente? @relation(fields: [cliente_id], references: [id])
+  
+  conversa_id       Int?
+  conversa          Conversa? @relation(fields: [conversa_id], references: [id])
+  
+  mensagem_id       Int?
+  mensagem          Mensagem? @relation(fields: [mensagem_id], references: [id])
+  
+  cupom_id          Int?
+  cupom             Cupom?   @relation(fields: [cupom_id], references: [id])
+  
+  oportunidade_id   Int?
+  oportunidade      Oportunidade? @relation(fields: [oportunidade_id], references: [id])
+  
+  tele_id           Int?
+  loja_id           Int?
+  
+  payload_json      Json
+  ocorrido_em       DateTime
+  created_at        DateTime @default(now())
+  
+  @@index([tipo])
+  @@index([correlation_id])
+}
+
+// ==========================================
+// 4. MART E JOB LAYER
+// ==========================================
+
+model MetricsSnapshot {
+  id         Int      @id @default(autoincrement())
+  data       DateTime
+  loja       String?
+  tele       String?
+  
+  leads      Int      @default(0)
+  conversas  Int      @default(0)
+  compareceu Int      @default(0)
+  no_show    Int      @default(0)
+  canceladas Int      @default(0)
+  ticket     Decimal  @default(0) @db.Decimal(10,2)
+  receita    Decimal  @default(0) @db.Decimal(10,2)
+  
+  json       Json?
+  created_at DateTime @default(now())
+}
+
+model AiJob {
+  id          Int         @id @default(autoincrement())
+  entity_type String
+  entity_id   String
+  provider    AiProvider
+  status      AiJobStatus @default(PENDING)
+  model       String?
+  tokens      Int?
+  cost        Decimal?    @db.Decimal(10,6)
+  
+  started_at  DateTime?
+  finished_at DateTime?
+}

@@ -1,0 +1,23 @@
+version: "3.8"
+
+services:
+  web:
+    image: gbacentrotecnico/sistema-bi:latest
+    container_name: bi_web
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.production
+    environment:
+      - NODE_ENV=production
+    restart: always
+
+  worker:
+    image: gbacentrotecnico/sistema-bi:latest
+    container_name: bi_worker
+    command: npm run worker
+    env_file:
+      - .env.production
+    environment:
+      - NODE_ENV=production
+    restart: always

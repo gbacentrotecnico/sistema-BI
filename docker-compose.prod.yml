@@ -6,10 +6,10 @@ services:
     container_name: bi_web
     ports:
       - "3000:3000"
-    env_file:
-      - .env.production
     environment:
       - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - DOMAIN=${DOMAIN}
     restart: always
     networks:
       - network_swarm_public
@@ -25,10 +25,10 @@ services:
     image: gbacentrotecnico/sistema-bi:latest
     container_name: bi_worker
     command: npm run worker
-    env_file:
-      - .env.production
     environment:
       - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - DOMAIN=${DOMAIN}
     restart: always
     networks:
       - network_swarm_public

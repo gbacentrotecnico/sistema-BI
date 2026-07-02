@@ -74,7 +74,7 @@ export class ChatwootAdapter implements IIntegrationAdapter {
       }
 
       default:
-        Logger.info(`[ChatwootAdapter] Evento ignorado ou não suportado: ${rawEvent.event_type}`, { id: rawEvent.id });
+        Logger.info(`[ChatwootAdapter] Evento ignorado ou não suportado: ${rawEvent.event_type} (ID: ${rawEvent.id})`);
         break;
     }
   }

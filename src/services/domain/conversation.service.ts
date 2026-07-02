@@ -37,6 +37,8 @@ export class ConversationService {
     // 4. Salva no Event Store (SSOT) garantindo a imutabilidade do acontecimento
     await prisma.evento.create({
       data: {
+        aggregate_type: 'CONVERSATION',
+        aggregate_id: conversa.id.toString(),
         tipo: 'CONVERSATION_CREATED',
         schema_version: aggregate.schemaVersion,
         aggregate_version: aggregate.aggregateVersion,
@@ -53,6 +55,6 @@ export class ConversationService {
       }
     });
 
-    Logger.info(`Conversation ${conversa.id} created and event logged`, { traceId: command.traceId });
+    Logger.info(`Conversation ${conversa.id} created and event logged (Trace: ${command.traceId})`);
   }
 }

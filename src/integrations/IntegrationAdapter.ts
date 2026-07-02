@@ -12,5 +12,5 @@ export const processRawEvent = async (event: RawEvent): Promise<void> => {
     throw new Error(`No adapter registered for source: ${event.source}`);
   }
 
-  await adapter.process(event);
+  await adapter.processEvent(event);
 };

@@ -452,3 +452,28 @@ model AiJob {
   started_at  DateTime?
   finished_at DateTime?
 }
+
+model PerformanceCampanha {
+  id                          String   @id @default(uuid())
+  data                        DateTime
+  adSetName                   String
+  campaignName                String
+  alcance                     Int
+  impressoes                  Int
+  frequencia                  Float
+  resultados                  Float?
+  custoPorResultado           Float?
+  valorGasto                  Float
+  cpm                         Float
+  cliquesLink                 Int
+  cpc                         Float?
+  ctr                         Float
+  videoWatches50              Int?
+  videoWatches25              Int?
+  videoWatches75              Int?
+  videoWatches95              Int?
+  conversoesMensagens         Int?
+  custoPorConversaoMensagem   Float?
+  createdAt                   DateTime @default(now())
+}
+

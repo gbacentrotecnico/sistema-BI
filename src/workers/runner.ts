@@ -4,9 +4,12 @@ import { prisma } from '@/config/prisma';
 import '@/integrations/chatwoot/ChatwootAdapter'; // Carrega para garantir registro, caso usemos decoradores ou auto-registro (como vamos simplificar, injetaremos aqui)
 import { IntegrationRegistry } from '@/integrations/IntegrationRegistry';
 import { ChatwootAdapter } from '@/integrations/chatwoot/ChatwootAdapter';
+import { MetaAdsAdapter } from '@/integrations/meta_ads/MetaAdsAdapter';
 
 // Registro manual para garantir que o adaptador esteja disponível
 IntegrationRegistry.register('CHATWOOT', new ChatwootAdapter());
+IntegrationRegistry.register('meta_ads', new MetaAdsAdapter());
+
 
 const engine = new WorkerEngine('NodeDaemon-01');
 

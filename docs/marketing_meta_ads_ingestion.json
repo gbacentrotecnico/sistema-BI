@@ -1,0 +1,119 @@
+{
+  "name": "marketing_meta_ads_ingestion",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": "trigger",
+        "triggerTimes": {
+          "item": [
+            {
+              "mode": "everyDay",
+              "hour": 8
+            }
+          ]
+        }
+      },
+      "id": "e674b341-a1e4-41d6-b258-f5420b9ee2f3",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        380,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1bpcC5DuQmMMM-b8j3cQd8WJpT66R4ZAON1lgIHBVQ-I",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Página1",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "3be921bf-f1ad-46eb-a4bd-b4f620bd123f",
+      "name": "Google Sheets - Ler Planilha",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        580,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => ({\n  json: {\n    source: \"meta_ads\",\n    payload_json: {\n      \"data\": item.json[\"Day\"],\n      \"adSetName\": item.json[\"Ad Set Name\"],\n      \"campaignName\": item.json[\"Campaign Name\"],\n      \"alcance\": item.json[\"Reach\"],\n      \"impressoes\": item.json[\"Impressions\"],\n      \"frequencia\": item.json[\"Frequency\"],\n      \"resultados\": item.json[\"Results\"],\n      \"custoPorResultado\": item.json[\"Cost per Result\"],\n      \"valorGasto\": item.json[\"Amount Spent\"],\n      \"cpm\": item.json[\"CPM (Cost per 1,000 Impressions)\"],\n      \"cliquesLink\": item.json[\"Link Clicks\"],\n      \"cpc\": item.json[\"CPC (Cost per Link Click)\"],\n      \"ctr\": item.json[\"CTR (Link Click-Through Rate)\"],\n      \"videoWatches25\": item.json[\"Video Watches at 25%\"],\n      \"videoWatches50\": item.json[\"Video Watches at 50%\"],\n      \"videoWatches75\": item.json[\"Video Watches at 75%\"],\n      \"videoWatches95\": item.json[\"Video Watches at 95%\"],\n      \"conversoesMensagens\": item.json[\"Messaging Conversations Started\"],\n      \"custoPorConversaoMensagem\": item.json[\"Cost per Messaging Conversations Started\"]\n    }\n  }\n}));"
+      },
+      "id": "a918a221-7299-4c12-bd74-e3c39d88ab2f",
+      "name": "Code - Mapear Adveronix",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://relatorios.gbamecanica.com.br/api/webhooks/inbound",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "8f8b3c41-a1e4-41d6-b258-f5420b9ee3f4",
+      "name": "HTTP Request - Ingestão API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        980,
+        240
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Ler Planilha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Ler Planilha": {
+      "main": [
+        [
+          {
+            "node": "Code - Mapear Adveronix",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Mapear Adveronix": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request - Ingestão API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

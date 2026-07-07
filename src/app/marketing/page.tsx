@@ -193,9 +193,11 @@ export default function MarketingCampaignsPage() {
       {/* Brand Header Section */}
       <header className="max-w-6xl mx-auto mb-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-abucci-border pb-6 relative z-10">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-gradient-to-br from-neutral-800 to-neutral-900 border border-neutral-700 rounded-xl flex items-center justify-center shadow-xl shadow-black/60">
-            <span className="font-display font-black text-2xl text-abucci-gold leading-none tracking-tighter">A</span>
+          <div className="w-24 h-16 flex items-center justify-center overflow-hidden">
+            <img src="/logo-abucci.png" alt="Grupo Abucci Logo" className="w-full h-full object-contain" />
           </div>
+
+
           <div className="flex flex-col">
             <div className="flex items-center gap-2">
               <span className="font-display font-bold text-base tracking-wider text-neutral-100 uppercase">GRUPO ABUCCI</span>

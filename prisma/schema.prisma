@@ -191,9 +191,14 @@ model Tele {
 }
 
 model Cliente {
-  id               Int            @id @default(autoincrement())
-  telefone         String         @unique 
-  nome             String?
+  id                  Int            @id @default(autoincrement())
+  telefone            String         @unique 
+  telefone2           String?        @unique
+  nome                String?
+  data_nascimento     DateTime?
+  data_ultima_compra  DateTime?
+  placa_veiculo       String?
+
   
   tele_original_id Int?
   tele_original    Tele?          @relation("TeleOriginal", fields: [tele_original_id], references: [id])

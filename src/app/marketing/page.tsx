@@ -45,8 +45,6 @@ export default function MarketingCampaignsPage() {
       if (data.success) {
         setAniversariantes(data.aniversariantes || []);
         setRevisoes(data.revisoes || []);
-        
-        // Limpa seleção
         setSelectedClients({});
       } else {
         throw new Error(data.error || 'Erro desconhecido');
@@ -82,10 +80,9 @@ export default function MarketingCampaignsPage() {
       if (res.ok && data.success) {
         setUploadStatus({
           success: true,
-          message: `Sucesso! Importados: ${data.inserted} | Atualizados: ${data.updated} de ${data.total} contatos.`,
+          message: `Planilha importada com sucesso! Inseridos: ${data.inserted} | Atualizados: ${data.updated} de ${data.total} contatos.`,
         });
         setUploadFile(null);
-        // Recarrega dados
         loadDashboardData(selectedDate);
       } else {
         setUploadStatus({
@@ -93,7 +90,7 @@ export default function MarketingCampaignsPage() {
           message: data.error || 'Erro ao processar planilha.',
         });
       }
-    } catch (err: any) {
+    } catch (err) {
       setUploadStatus({
         success: false,
         message: 'Erro de rede ao fazer upload.',
@@ -103,7 +100,6 @@ export default function MarketingCampaignsPage() {
     }
   };
 
-  // Lógica de Seleção de Clientes
   const getActiveList = useCallback(() => {
     return activeTab === 'aniv' ? aniversariantes : revisoes;
   }, [activeTab, aniversariantes, revisoes]);
@@ -135,13 +131,11 @@ export default function MarketingCampaignsPage() {
     return Object.keys(selectedClients).length;
   };
 
-  // Abre Modal de Sincronização
   const handleOpenSync = () => {
     if (getSelectedCount() === 0) return;
     
-    // Sugere uma tag padrão baseada no contexto
     const today = new Date();
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
     const currentMonth = monthNames[today.getMonth()];
     
     if (activeTab === 'aniv') {
@@ -153,7 +147,6 @@ export default function MarketingCampaignsPage() {
     setShowSyncModal(true);
   };
 
-  // Executa Sincronização
   const handleSyncChatwoot = async () => {
     if (!syncTag.trim()) return;
     setSyncing(true);
@@ -172,7 +165,7 @@ export default function MarketingCampaignsPage() {
       if (res.ok && data.success) {
         setSyncResult({
           success: true,
-          message: `Sincronizados com sucesso: ${data.successCount} contatos. Falhas: ${data.errorCount}.`,
+          message: `Sincronização concluída! Sucesso: ${data.successCount} contatos. Falhas: ${data.errorCount}.`,
         });
         setSelectedClients({});
       } else {
@@ -192,72 +185,88 @@ export default function MarketingCampaignsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans p-6 sm:p-12 relative overflow-hidden">
-      {/* Decorative Radial Gradients */}
-      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-emerald-950/20 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-teal-950/20 rounded-full blur-[120px] pointer-events-none" />
+    <div className="min-h-screen bg-abucci-dark text-neutral-200 font-sans p-6 sm:p-10 relative overflow-hidden">
+      {/* Subtle Background Glows */}
+      <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-abucci-gold/5 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-neutral-900/40 rounded-full blur-[140px] pointer-events-none" />
 
-      <header className="max-w-6xl mx-auto mb-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
-        <div>
-          <span className="text-emerald-400 text-xs font-semibold uppercase tracking-widest px-2.5 py-1 bg-emerald-500/10 rounded-full border border-emerald-500/20">
-            Painel Operacional
-          </span>
-          <h1 className="text-3xl font-extrabold tracking-tight mt-2 text-white bg-clip-text bg-gradient-to-r from-white via-zinc-200 to-zinc-400">
-            Módulo de Campanhas de Marketing
-          </h1>
-          <p className="text-zinc-400 text-sm mt-1">
-            Gestão de contatos de aniversários, revisões e sincronização rápida no Chatwoot.
-          </p>
+      {/* Brand Header Section */}
+      <header className="max-w-6xl mx-auto mb-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-abucci-border pb-6 relative z-10">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-gradient-to-br from-neutral-800 to-neutral-900 border border-neutral-700 rounded-xl flex items-center justify-center shadow-xl shadow-black/60">
+            <span className="font-display font-black text-2xl text-abucci-gold leading-none tracking-tighter">A</span>
+          </div>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              <span className="font-display font-bold text-base tracking-wider text-neutral-100 uppercase">GRUPO ABUCCI</span>
+              <span className="text-[10px] text-abucci-gold bg-abucci-gold/10 border border-abucci-gold/20 px-2 py-0.5 rounded font-mono font-medium">
+                MARKETING ENGINE
+              </span>
+            </div>
+            <span className="text-xs text-neutral-400 font-mono tracking-widest uppercase mt-0.5">
+              Campanhas Operacionais & Sincronização VPS
+            </span>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          <div className="text-[11px] text-abucci-gold/90 font-mono bg-abucci-gold/10 border border-abucci-gold/20 py-2 px-4 rounded-lg font-medium tracking-tight shadow-md">
+            FORÇA QUE TE LEVA MAIS LONGE
+          </div>
         </div>
       </header>
 
       <main className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10">
-        {/* Upload & Setup Section */}
+        
+        {/* Left Control Panel (Upload & Filters) */}
         <section className="lg:col-span-1 flex flex-col gap-6">
-          <div className="bg-zinc-900/40 backdrop-blur-md border border-zinc-800/80 rounded-2xl p-6 shadow-xl relative overflow-hidden">
-            <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          
+          {/* File Upload Box */}
+          <div className="bg-abucci-card border border-abucci-border rounded-xl p-6 shadow-xl relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-1 h-full bg-abucci-gold" />
+            <h2 className="text-md font-bold text-white mb-3 flex items-center gap-2 font-display">
+              <svg className="w-5 h-5 text-abucci-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
               </svg>
               Upload de Planilha
             </h2>
-            <p className="text-xs text-zinc-400 mb-4 leading-relaxed">
-              Suba arquivos nos formatos <strong>XLSX</strong> ou <strong>CSV</strong>. O importador mapeará automaticamente colunas de Nome, Telefones, Datas e Veículo.
+            <p className="text-xs text-neutral-400 mb-4 leading-relaxed">
+              Arraste ou selecione arquivos **XLSX** ou **CSV**. Nosso sistema mapeará automaticamente os dados de Nome, Telefones e datas de aniversário/compra.
             </p>
 
             <form onSubmit={handleUploadSubmit} className="space-y-4">
-              <div className="border-2 border-dashed border-zinc-800 hover:border-emerald-500/50 transition-colors rounded-xl p-6 text-center cursor-pointer relative bg-zinc-950/40 group">
+              <div className="border border-dashed border-abucci-border hover:border-abucci-gold/40 transition-colors rounded-lg p-6 text-center cursor-pointer relative bg-neutral-950/40 group">
                 <input
                   type="file"
                   accept=".csv,.xlsx"
                   onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 />
-                <svg className="w-8 h-8 text-zinc-500 group-hover:text-emerald-400 transition-colors mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                <svg className="w-8 h-8 text-neutral-600 group-hover:text-abucci-gold transition-colors mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                <span className="text-xs font-medium text-zinc-300 block">
-                  {uploadFile ? uploadFile.name : 'Clique ou arraste a planilha'}
+                <span className="text-xs font-semibold text-neutral-300 block">
+                  {uploadFile ? uploadFile.name : 'Selecionar arquivo modelo'}
                 </span>
-                <span className="text-[10px] text-zinc-500 block mt-1">
-                  CSV, XLSX de qualquer exportador
+                <span className="text-[10px] text-neutral-500 block mt-1">
+                  Formatos aceitos: CSV, XLSX
                 </span>
               </div>
 
               <button
                 type="submit"
                 disabled={!uploadFile || uploading}
-                className="w-full bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] disabled:opacity-50 disabled:scale-100 disabled:bg-emerald-500 text-zinc-950 text-xs font-semibold py-2.5 px-4 rounded-xl transition-all shadow-lg shadow-emerald-500/10 flex justify-center items-center gap-2"
+                className="w-full bg-abucci-gold hover:bg-amber-600 active:scale-[0.98] disabled:opacity-40 disabled:scale-100 text-neutral-950 text-xs font-bold py-2.5 px-4 rounded-lg transition-all shadow-md shadow-abucci-gold/10 flex justify-center items-center gap-2"
               >
                 {uploading ? (
                   <>
-                    <svg className="animate-spin h-4 w-4 text-zinc-950" fill="none" viewBox="0 0 24 24">
+                    <svg className="animate-spin h-4 w-4 text-neutral-950" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
-                    Processando dados...
+                    Processando...
                   </>
-                ) : 'Importar Contatos'}
+                ) : 'Importar Planilha'}
               </button>
             </form>
 
@@ -268,101 +277,104 @@ export default function MarketingCampaignsPage() {
             )}
           </div>
 
-          <div className="bg-zinc-900/40 backdrop-blur-md border border-zinc-800/80 rounded-2xl p-6 shadow-xl">
-            <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <svg className="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          {/* Configuration / Date Filter */}
+          <div className="bg-abucci-card border border-abucci-border rounded-xl p-6 shadow-xl">
+            <h2 className="text-md font-bold text-white mb-4 flex items-center gap-2 font-display">
+              <svg className="w-5 h-5 text-abucci-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              Filtro de Data
+              Filtros da Campanha
             </h2>
-            <div className="space-y-2">
-              <label className="text-[11px] uppercase tracking-wider text-zinc-500 font-bold block">
-                Data de Referência (Revisão 90d)
-              </label>
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-100 text-sm focus:outline-none focus:border-teal-500 transition-colors"
-              />
-              <span className="text-[10px] text-zinc-500 block leading-relaxed mt-1">
-                Ao alterar a data, a tabela de revisão listará clientes que compraram há exatamente 90 dias antes da data escolhida.
+            <div className="space-y-3">
+              <div>
+                <label className="text-[10px] uppercase font-bold text-neutral-400 block mb-1">
+                  Data de Referência (Revisão 90d)
+                </label>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="w-full bg-neutral-950 border border-abucci-border rounded-lg px-4 py-2 text-neutral-100 text-xs focus:outline-none focus:border-abucci-gold transition-colors font-mono"
+                />
+              </div>
+              <span className="text-[10px] text-neutral-500 block leading-relaxed">
+                Modifique a data para consultar e agendar campanhas de revisão de 90 dias com antecedência.
               </span>
             </div>
           </div>
         </section>
 
-        {/* Dashboard Lists Section */}
+        {/* Right Dashboard Data (Listings & Actions) */}
         <section className="lg:col-span-2 flex flex-col gap-6">
-          <div className="bg-zinc-900/40 backdrop-blur-md border border-zinc-800/80 rounded-2xl shadow-xl flex flex-col">
+          <div className="bg-abucci-card border border-abucci-border rounded-xl shadow-xl flex flex-col overflow-hidden">
             
-            {/* Custom Tabs */}
-            <div className="flex border-b border-zinc-800/80 p-2 gap-2">
+            {/* Custom Tab selectors */}
+            <div className="flex border-b border-abucci-border bg-neutral-950/20 p-2 gap-2">
               <button
                 onClick={() => { setActiveTab('aniv'); setSelectedClients({}); }}
-                className={`flex-1 text-center py-2.5 rounded-xl text-xs font-semibold transition-all ${activeTab === 'aniv' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200'}`}
+                className={`flex-1 text-center py-2.5 rounded-lg text-xs font-semibold font-display transition-all ${activeTab === 'aniv' ? 'bg-gradient-to-r from-abucci-gold/15 to-transparent text-abucci-gold border-b-2 border-abucci-gold font-bold' : 'text-neutral-400 hover:text-neutral-200'}`}
               >
-                Aniversariantes da Semana ({aniversariantes.length})
+                🎂 Aniversariantes da Semana ({aniversariantes.length})
               </button>
               <button
                 onClick={() => { setActiveTab('rev'); setSelectedClients({}); }}
-                className={`flex-1 text-center py-2.5 rounded-xl text-xs font-semibold transition-all ${activeTab === 'rev' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200'}`}
+                className={`flex-1 text-center py-2.5 rounded-lg text-xs font-semibold font-display transition-all ${activeTab === 'rev' ? 'bg-gradient-to-r from-abucci-gold/15 to-transparent text-abucci-gold border-b-2 border-abucci-gold font-bold' : 'text-neutral-400 hover:text-neutral-200'}`}
               >
-                Revisão de 90 Dias ({revisoes.length})
+                🚗 Revisão de 90 Dias ({revisoes.length})
               </button>
             </div>
 
             {/* List Action Bar */}
-            <div className="px-6 py-4 flex justify-between items-center bg-zinc-950/20 border-b border-zinc-800/80 gap-4">
+            <div className="px-6 py-4 flex justify-between items-center bg-neutral-950/40 border-b border-abucci-border gap-4">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] text-zinc-400 bg-zinc-800 px-2 py-1 rounded">
-                  {getSelectedCount()} selecionados
+                <span className="text-[11px] font-mono text-neutral-400 bg-neutral-900 border border-abucci-border px-2.5 py-1 rounded">
+                  {getSelectedCount()} contatos selecionados
                 </span>
               </div>
               <button
                 onClick={handleOpenSync}
                 disabled={getSelectedCount() === 0}
-                className="bg-teal-500 hover:bg-teal-600 disabled:opacity-40 disabled:scale-100 active:scale-[0.98] text-zinc-950 text-xs font-bold py-2 px-4 rounded-xl transition-all shadow-md shadow-teal-500/10 flex items-center gap-1.5"
+                className="bg-abucci-gold hover:bg-amber-600 disabled:opacity-40 disabled:scale-100 active:scale-[0.98] text-neutral-950 text-xs font-bold py-2 px-4 rounded-lg transition-all shadow-md shadow-abucci-gold/10 flex items-center gap-1.5"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 10.742l-2.084 1.157M10.166 12.09l-3.566 2.378m3.566-2.378L6.7 15.63m10.6-2.888l-2.084-1.157m0 0L13.8 9.57m1.4 1.157l-3.566 2.378m3.566-2.378l-3.566 2.378M12 5.168V19m0-13.832c.707 0 1.343.284 1.802.742L18.6 12m-6.6-6.832C11.293 5.168 10.657 5.45 10.2 5.91L5.4 12" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 Criar Lista no Chatwoot
               </button>
             </div>
 
-            {/* Content list */}
-            <div className="p-2 overflow-x-auto min-h-[300px]">
+            {/* Content Table */}
+            <div className="overflow-x-auto min-h-[340px]">
               {loading ? (
-                <div className="flex flex-col items-center justify-center py-20 gap-3">
-                  <svg className="animate-spin h-6 w-6 text-emerald-400" fill="none" viewBox="0 0 24 24">
+                <div className="flex flex-col items-center justify-center py-24 gap-3">
+                  <svg className="animate-spin h-6 w-6 text-abucci-gold" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  <span className="text-xs text-zinc-500">Buscando contatos...</span>
+                  <span className="text-xs text-neutral-400 font-mono">Carregando contatos...</span>
                 </div>
               ) : error ? (
-                <div className="text-center py-20 text-xs text-red-400">
+                <div className="text-center py-24 text-xs text-red-400 font-mono">
                   {error}
                 </div>
               ) : getActiveList().length === 0 ? (
-                <div className="text-center py-20 text-xs text-zinc-500">
-                  Nenhum cliente atende a esta regra na data/semana selecionada.
+                <div className="text-center py-24 text-xs text-neutral-500 font-mono">
+                  Nenhum registro para exibir na data selecionada.
                 </div>
               ) : (
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className="text-zinc-500 border-b border-zinc-800/80">
-                      <th className="py-3 px-4 w-10">
+                    <tr className="text-neutral-500 border-b border-abucci-border bg-neutral-950/20 font-mono">
+                      <th className="py-3 px-4 w-12">
                         <input
                           type="checkbox"
                           onChange={(e) => handleSelectAll(e.target.checked)}
                           checked={getActiveList().every(item => selectedClients[item.id])}
-                          className="rounded border-zinc-800 bg-zinc-950 text-teal-500 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+                          className="rounded border-abucci-border bg-neutral-950 text-abucci-gold focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
                         />
                       </th>
-                      <th className="py-3 px-3 font-semibold">Nome</th>
-                      <th className="py-3 px-3 font-semibold">Telefone Principal</th>
+                      <th className="py-3 px-3 font-semibold">Cliente</th>
+                      <th className="py-3 px-3 font-semibold">Telefones</th>
                       <th className="py-3 px-3 font-semibold">Veículo</th>
                       <th className="py-3 px-3 font-semibold">
                         {activeTab === 'aniv' ? 'Nascimento' : 'Última Compra'}
@@ -373,31 +385,31 @@ export default function MarketingCampaignsPage() {
                     {getActiveList().map(item => (
                       <tr
                         key={item.id}
-                        className="border-b border-zinc-800/40 hover:bg-zinc-800/20 transition-colors"
+                        className="border-b border-abucci-border/40 hover:bg-neutral-900/40 transition-colors"
                       >
                         <td className="py-3.5 px-4">
                           <input
                             type="checkbox"
                             checked={!!selectedClients[item.id]}
                             onChange={(e) => handleSelectOne(item.id, e.target.checked)}
-                            className="rounded border-zinc-800 bg-zinc-950 text-teal-500 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+                            className="rounded border-abucci-border bg-neutral-950 text-abucci-gold focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
                           />
                         </td>
-                        <td className="py-3.5 px-3 font-medium text-white truncate max-w-[200px]">
+                        <td className="py-3.5 px-3 font-semibold text-white truncate max-w-[200px]">
                           {item.nome}
                         </td>
-                        <td className="py-3.5 px-3 text-zinc-300">
+                        <td className="py-3.5 px-3 text-neutral-300 font-mono">
                           {item.telefone}
                           {item.telefone2 && (
-                            <span className="text-[10px] text-zinc-500 block">
-                              Secundário: {item.telefone2}
+                            <span className="text-[10px] text-neutral-500 block">
+                              Alternativo: {item.telefone2}
                             </span>
                           )}
                         </td>
-                        <td className="py-3.5 px-3 text-zinc-400">
+                        <td className="py-3.5 px-3 text-neutral-400 font-mono">
                           {item.placa_veiculo || '-'}
                         </td>
-                        <td className="py-3.5 px-3 text-zinc-400">
+                        <td className="py-3.5 px-3 text-neutral-400 font-mono">
                           {activeTab === 'aniv' 
                             ? (item.data_nascimento ? new Date(item.data_nascimento).toLocaleDateString('pt-BR') : '-') 
                             : (item.data_ultima_compra ? new Date(item.data_ultima_compra).toLocaleDateString('pt-BR') : '-')
@@ -415,30 +427,28 @@ export default function MarketingCampaignsPage() {
 
       {/* Sync Chatwoot Modal */}
       {showSyncModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-md p-6 shadow-2xl relative overflow-hidden">
-            <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
-              Sincronizar com Chatwoot
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4">
+          <div className="bg-abucci-card border border-abucci-border rounded-xl w-full max-w-md p-6 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-abucci-gold" />
+            <h3 className="text-md font-bold text-white mb-2 font-display flex items-center gap-2">
+              Sincronizar VPS Chatwoot
             </h3>
-            <p className="text-xs text-zinc-400 mb-5 leading-relaxed">
-              Você está prestes a exportar <strong>{getSelectedCount()} contatos</strong> selecionados para a sua VPS do Chatwoot.
+            <p className="text-xs text-neutral-400 mb-5 leading-relaxed">
+              Exportando **{getSelectedCount()} contatos** do Grupo Abucci para o Chatwoot.
             </p>
 
             <div className="space-y-4">
               <div>
-                <label className="text-[10px] uppercase font-bold text-zinc-500 block mb-1">
-                  Defina a Etiqueta (Tag) para a Campanha
+                <label className="text-[10px] uppercase font-bold text-neutral-500 block mb-1 font-mono">
+                  Etiqueta da Campanha (Tag)
                 </label>
                 <input
                   type="text"
                   value={syncTag}
                   onChange={(e) => setSyncTag(e.target.value)}
                   placeholder="Ex: Aniversariantes_Jul_Semana_1"
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-100 text-xs focus:outline-none focus:border-teal-500 transition-colors"
+                  className="w-full bg-neutral-950 border border-abucci-border rounded-lg px-4 py-2.5 text-neutral-100 text-xs focus:outline-none focus:border-abucci-gold transition-colors font-mono"
                 />
-                <span className="text-[10px] text-zinc-500 mt-1 block">
-                  Você poderá usar essa etiqueta no Chatwoot para segmentar seus disparos em massa.
-                </span>
               </div>
 
               {syncResult && (
@@ -451,24 +461,24 @@ export default function MarketingCampaignsPage() {
                 <button
                   onClick={() => setShowSyncModal(false)}
                   disabled={syncing}
-                  className="flex-1 bg-zinc-800 hover:bg-zinc-700 active:scale-[0.98] text-zinc-300 text-xs font-semibold py-2.5 rounded-xl transition-all"
+                  className="flex-1 bg-neutral-900 border border-abucci-border hover:bg-neutral-800 active:scale-[0.98] text-neutral-300 text-xs font-bold py-2.5 rounded-lg transition-all"
                 >
                   Fechar
                 </button>
                 <button
                   onClick={handleSyncChatwoot}
                   disabled={syncing || !syncTag.trim()}
-                  className="flex-1 bg-teal-500 hover:bg-teal-600 disabled:opacity-50 disabled:scale-100 active:scale-[0.98] text-zinc-950 text-xs font-bold py-2.5 rounded-xl transition-all shadow-md shadow-teal-500/10 flex justify-center items-center gap-1.5"
+                  className="flex-1 bg-abucci-gold hover:bg-amber-600 disabled:opacity-40 disabled:scale-100 active:scale-[0.98] text-neutral-950 text-xs font-bold py-2.5 rounded-lg transition-all shadow-md shadow-abucci-gold/10 flex justify-center items-center gap-1.5"
                 >
                   {syncing ? (
                     <>
-                      <svg className="animate-spin h-3.5 w-3.5 text-zinc-950" fill="none" viewBox="0 0 24 24">
+                      <svg className="animate-spin h-3.5 w-3.5 text-neutral-950" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                       </svg>
-                      Enviando...
+                      Sincronizando...
                     </>
-                  ) : 'Exportar Contatos'}
+                  ) : 'Exportar Lista'}
                 </button>
               </div>
             </div>

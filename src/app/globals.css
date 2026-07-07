@@ -12,6 +12,15 @@
   --font-mono: var(--font-geist-mono);
 }
 
+@theme {
+  --color-abucci-gold: #f39c12;
+  --color-abucci-dark: #0a0b0d;
+  --color-abucci-card: #12141c;
+  --color-abucci-border: #1e2230;
+  --color-abucci-gray: #7f8c8d;
+}
+
+
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;

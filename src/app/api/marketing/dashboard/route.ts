@@ -38,7 +38,7 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const selectedDateStr = url.searchParams.get('date') || new Date().toISOString().split('T')[0];
 
-    const today = new Date();
+    const today = new Date(selectedDateStr + 'T00:00:00');
     const { monday, sunday } = getWeekInterval(new Date(today));
 
     // 1. ANIVERSARIANTES DA SEMANA

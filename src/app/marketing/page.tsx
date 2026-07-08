@@ -50,7 +50,7 @@ export default function MarketingCampaignsPage() {
   const [selectedClients, setSelectedClients] = useState<Record<number, boolean>>({});
   const [syncTag, setSyncTag] = useState('');
   const [syncing, setSyncing] = useState(false);
-  const [syncResult, setSyncResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [syncResult, setSyncResult] = useState<{ success: boolean; message: string; errorCount?: number; logs?: string[] } | null>(null);
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [viewingClient, setViewingClient] = useState<any | null>(null);
   const [activeTab, setActiveTab] = useState<'aniv' | 'rev'>('aniv');
@@ -248,18 +248,24 @@ export default function MarketingCampaignsPage() {
         setSyncResult({
           success: true,
           message: `Sincronização concluída! Sucesso: ${data.successCount} contatos. Falhas: ${data.errorCount}.`,
+          errorCount: data.errorCount,
+          logs: data.logs
         });
-        setSelectedClients({});
+        // Não limpamos selectedClients aqui para o usuário poder ver os que falharam ou manter o count visual coerente
       } else {
         setSyncResult({
           success: false,
           message: data.error || 'Erro na sincronização.',
+          errorCount: clientIds.length,
+          logs: data.logs || []
         });
       }
     } catch (err) {
       setSyncResult({
         success: false,
         message: 'Erro ao conectar com a API de sincronização.',
+        errorCount: clientIds.length,
+        logs: []
       });
     } finally {
       setSyncing(false);
@@ -633,8 +639,19 @@ export default function MarketingCampaignsPage() {
               </div>
 
               {syncResult && (
-                <div className={`p-3 rounded-lg border text-xs leading-relaxed ${syncResult.success ? 'bg-emerald-950/20 border-emerald-800/30 text-emerald-300' : 'bg-red-950/20 border-red-800/30 text-red-300'}`}>
-                  {syncResult.message}
+                <div className="space-y-2">
+                  <div className={`p-3 rounded-lg border text-xs leading-relaxed ${syncResult.success && (!syncResult.errorCount || syncResult.errorCount === 0) ? 'bg-emerald-950/20 border-emerald-800/30 text-emerald-300' : 'bg-red-950/20 border-red-800/30 text-red-300'}`}>
+                    {syncResult.message}
+                  </div>
+                  {syncResult.logs && syncResult.logs.length > 0 && (
+                    <div className="bg-neutral-950/80 border border-abucci-border rounded-lg p-3 max-h-[150px] overflow-y-auto font-mono text-[10px] text-neutral-400 space-y-1">
+                      {syncResult.logs.map((log: string, idx: number) => (
+                        <div key={idx} className={log.includes('Erro') || log.includes('Falha') ? 'text-red-400' : 'text-neutral-400'}>
+                          {log}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 

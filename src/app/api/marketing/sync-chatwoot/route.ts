@@ -13,13 +13,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Etiqueta inválida ou não informada.' }, { status: 400 });
     }
 
-    const chatwootUrl = process.env.CHATWOOT_API_URL;
-    const chatwootToken = process.env.CHATWOOT_API_TOKEN;
-    const chatwootAccountId = process.env.CHATWOOT_ACCOUNT_ID;
+    // Busca a integração ativa do Chatwoot no banco de dados
+    const chatwootIntegration = await prisma.integration.findFirst({
+      where: { tipo: 'CHATWOOT', status: 'ACTIVE' }
+    });
+
+    const integrationConfig = chatwootIntegration?.config_json as any;
+
+    const chatwootUrl = integrationConfig?.apiUrl || process.env.CHATWOOT_API_URL;
+    const chatwootToken = integrationConfig?.apiToken || process.env.CHATWOOT_API_TOKEN;
+    const chatwootAccountId = integrationConfig?.accountId || process.env.CHATWOOT_ACCOUNT_ID;
 
     if (!chatwootUrl || !chatwootToken || !chatwootAccountId) {
       return NextResponse.json({ 
-        error: 'Configurações da API do Chatwoot ausentes no arquivo .env.' 
+        error: 'Configurações da API do Chatwoot ausentes (configure na tela ou no arquivo .env).' 
       }, { status: 500 });
     }
 

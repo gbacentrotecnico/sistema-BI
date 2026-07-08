@@ -3,12 +3,13 @@
   "nodes": [
     {
       "parameters": {
-        "rule": "trigger",
-        "triggerTimes": {
-          "item": [
+        "rule": {
+          "interval": [
             {
-              "mode": "everyDay",
-              "hour": 8
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 8,
+              "triggerAtMinute": 0
             }
           ]
         }
@@ -31,7 +32,7 @@
         },
         "sheetName": {
           "__rl": true,
-          "value": "Página1",
+          "value": "GBA MEC",
           "mode": "name"
         },
         "options": {}
@@ -47,7 +48,7 @@
     },
     {
       "parameters": {
-        "jsCode": "return items.map(item => ({\n  json: {\n    source: \"meta_ads\",\n    payload_json: {\n      \"data\": item.json[\"Day\"],\n      \"adSetName\": item.json[\"Ad Set Name\"],\n      \"campaignName\": item.json[\"Campaign Name\"],\n      \"alcance\": item.json[\"Reach\"],\n      \"impressoes\": item.json[\"Impressions\"],\n      \"frequencia\": item.json[\"Frequency\"],\n      \"resultados\": item.json[\"Results\"],\n      \"custoPorResultado\": item.json[\"Cost per Result\"],\n      \"valorGasto\": item.json[\"Amount Spent\"],\n      \"cpm\": item.json[\"CPM (Cost per 1,000 Impressions)\"],\n      \"cliquesLink\": item.json[\"Link Clicks\"],\n      \"cpc\": item.json[\"CPC (Cost per Link Click)\"],\n      \"ctr\": item.json[\"CTR (Link Click-Through Rate)\"],\n      \"videoWatches25\": item.json[\"Video Watches at 25%\"],\n      \"videoWatches50\": item.json[\"Video Watches at 50%\"],\n      \"videoWatches75\": item.json[\"Video Watches at 75%\"],\n      \"videoWatches95\": item.json[\"Video Watches at 95%\"],\n      \"conversoesMensagens\": item.json[\"Messaging Conversations Started\"],\n      \"custoPorConversaoMensagem\": item.json[\"Cost per Messaging Conversations Started\"]\n    }\n  }\n}));"
+        "jsCode": "return items.map(item => ({\n  json: {\n    source: \"meta_ads\",\n    event_type: \"daily_performance\",\n    payload_json: {\n      \"data\": item.json[\"Day\"],\n      \"adSetName\": item.json[\"Ad Set Name\"],\n      \"campaignName\": item.json[\"Campaign Name\"],\n      \"alcance\": item.json[\"Reach\"],\n      \"impressoes\": item.json[\"Impressions\"],\n      \"frequencia\": item.json[\"Frequency\"],\n      \"resultados\": item.json[\"Results\"],\n      \"custoPorResultado\": item.json[\"Cost per Result\"],\n      \"valorGasto\": item.json[\"Amount Spent\"],\n      \"cpm\": item.json[\"CPM (Cost per 1,000 Impressions)\"],\n      \"cliquesLink\": item.json[\"Link Clicks\"],\n      \"cpc\": item.json[\"CPC (Cost per Link Click)\"],\n      \"ctr\": item.json[\"CTR (Link Click-Through Rate)\"],\n      \"videoWatches25\": item.json[\"Video Watches at 25%\"],\n      \"videoWatches50\": item.json[\"Video Watches at 50%\"],\n      \"videoWatches75\": item.json[\"Video Watches at 75%\"],\n      \"videoWatches95\": item.json[\"Video Watches at 95%\"],\n      \"conversoesMensagens\": item.json[\"Messaging Conversations Started\"],\n      \"custoPorConversaoMensagem\": item.json[\"Cost per Messaging Conversations Started\"]\n    }\n  }\n}));"
       },
       "id": "a918a221-7299-4c12-bd74-e3c39d88ab2f",
       "name": "Code - Mapear Adveronix",
@@ -67,7 +68,7 @@
         "jsonBody": "={{ JSON.stringify($json) }}",
         "options": {}
       },
-      "id": "8f8b3c41-a1e4-41d6-b258-f5420b9ee3f4",
+      "id": "8f8b3c41-a1e4-41d6-b258-f5420b9ee2f3",
       "name": "HTTP Request - Ingestão API",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,

@@ -40,27 +40,48 @@ export async function POST(request: Request) {
         }
       });
 
-      const updateData: any = {
-        nome: row.nome || undefined,
-        data_nascimento: row.dataNascimento || undefined,
-        data_ultima_compra: row.dataUltimaCompra || undefined,
-        placa_veiculo: row.placaVeiculo || undefined,
-      };
-
-      if (row.telefone2) {
-        updateData.telefone2 = row.telefone2;
-      }
-
       if (existingClient) {
-        await prisma.cliente.update({
-          where: { id: existingClient.id },
-          data: updateData
-        });
-        updated++;
+        const updateData: any = {};
+
+        // 1. Nome: atualizar apenas se o nome existente for vazio ou se o novo nome for mais completo
+        if (row.nome && (!existingClient.nome || existingClient.nome.length < row.nome.length)) {
+          updateData.nome = row.nome;
+        }
+
+        // 2. Data de Nascimento: atualizar se não houver ou se for inválida
+        if (row.dataNascimento && !existingClient.data_nascimento) {
+          updateData.data_nascimento = row.dataNascimento;
+        }
+
+        // 3. Data de Última Compra: atualizar apenas se a nova data for mais recente
+        if (row.dataUltimaCompra) {
+          if (!existingClient.data_ultima_compra || new Date(row.dataUltimaCompra) > new Date(existingClient.data_ultima_compra)) {
+            updateData.data_ultima_compra = row.dataUltimaCompra;
+          }
+        }
+
+        // 4. Placa / Veículo: atualizar apenas se não houver placa cadastrada
+        if (row.placaVeiculo && !existingClient.placa_veiculo) {
+          updateData.placa_veiculo = row.placaVeiculo;
+        }
+
+        // 5. Telefone 2: atualizar apenas se não houver telefone2 cadastrado
+        if (row.telefone2 && !existingClient.telefone2 && existingClient.telefone !== row.telefone2) {
+          updateData.telefone2 = row.telefone2;
+        }
+
+        // Se houver algum campo para atualizar
+        if (Object.keys(updateData).length > 0) {
+          await prisma.cliente.update({
+            where: { id: existingClient.id },
+            data: updateData
+          });
+          updated++;
+        }
       } else {
         await prisma.cliente.create({
           data: {
-            nome: row.nome,
+            nome: row.nome || 'Cliente Importado',
             telefone: row.telefone,
             telefone2: row.telefone2 || null,
             data_nascimento: row.dataNascimento,
@@ -85,3 +106,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Erro interno ao processar planilha', details: error.message }, { status: 500 });
   }
 }
+

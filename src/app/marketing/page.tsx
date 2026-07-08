@@ -34,6 +34,13 @@ export default function MarketingCampaignsPage() {
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'aniv' | 'rev'>('aniv');
 
+  // Estados de Configuração Chatwoot
+  const [configApiUrl, setConfigApiUrl] = useState('');
+  const [configApiToken, setConfigApiToken] = useState('');
+  const [configAccountId, setConfigAccountId] = useState('');
+  const [savingConfig, setSavingConfig] = useState(false);
+  const [configStatus, setConfigStatus] = useState<{ success: boolean; message: string } | null>(null);
+
   // Carrega dados da API
   const loadDashboardData = useCallback(async (date: string) => {
     setLoading(true);
@@ -59,6 +66,54 @@ export default function MarketingCampaignsPage() {
   useEffect(() => {
     loadDashboardData(selectedDate);
   }, [selectedDate, loadDashboardData]);
+
+  // Carrega configurações da API ao iniciar
+  useEffect(() => {
+    async function fetchConfig() {
+      try {
+        const res = await fetch('/api/config');
+        const data = await res.json();
+        if (data.success && data.config?.CHATWOOT) {
+          setConfigApiUrl(data.config.CHATWOOT.apiUrl || '');
+          setConfigApiToken(data.config.CHATWOOT.apiToken || '');
+          setConfigAccountId(data.config.CHATWOOT.accountId || '');
+        }
+      } catch (err) {
+        console.error('Erro ao buscar configuração', err);
+      }
+    }
+    fetchConfig();
+  }, []);
+
+  const handleSaveConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingConfig(true);
+    setConfigStatus(null);
+    try {
+      const res = await fetch('/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo: 'CHATWOOT',
+          data: {
+            apiUrl: configApiUrl,
+            apiToken: configApiToken,
+            accountId: configAccountId
+          }
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setConfigStatus({ success: true, message: 'Configurações salvas com sucesso!' });
+      } else {
+        setConfigStatus({ success: false, message: data.error || 'Erro ao salvar.' });
+      }
+    } catch (err) {
+      setConfigStatus({ success: false, message: 'Erro ao conectar ao servidor.' });
+    } finally {
+      setSavingConfig(false);
+    }
+  };
 
   // Função de Upload
   const handleUploadSubmit = async (e: React.FormEvent) => {
@@ -303,6 +358,69 @@ export default function MarketingCampaignsPage() {
                 Modifique a data para consultar e agendar campanhas de revisão de 90 dias com antecedência.
               </span>
             </div>
+          </div>
+
+          {/* Chatwoot API Configuration */}
+          <div className="bg-abucci-card border border-abucci-border rounded-xl p-6 shadow-xl">
+            <h2 className="text-md font-bold text-white mb-4 flex items-center gap-2 font-display">
+              <svg className="w-5 h-5 text-abucci-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Configuração Chatwoot
+            </h2>
+            <form onSubmit={handleSaveConfig} className="space-y-3">
+              <div>
+                <label className="text-[10px] uppercase font-bold text-neutral-400 block mb-1">
+                  URL da API Chatwoot
+                </label>
+                <input
+                  type="text"
+                  value={configApiUrl}
+                  onChange={(e) => setConfigApiUrl(e.target.value)}
+                  placeholder="https://atendimento.gbamecanica.com.br"
+                  className="w-full bg-neutral-950 border border-abucci-border rounded-lg px-4 py-2 text-neutral-100 text-xs focus:outline-none focus:border-abucci-gold transition-colors font-mono"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] uppercase font-bold text-neutral-400 block mb-1">
+                  Token de Acesso API
+                </label>
+                <input
+                  type="password"
+                  value={configApiToken}
+                  onChange={(e) => setConfigApiToken(e.target.value)}
+                  placeholder="••••••••••••••••"
+                  className="w-full bg-neutral-950 border border-abucci-border rounded-lg px-4 py-2 text-neutral-100 text-xs focus:outline-none focus:border-abucci-gold transition-colors font-mono"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] uppercase font-bold text-neutral-400 block mb-1">
+                  ID da Conta (Account ID)
+                </label>
+                <input
+                  type="text"
+                  value={configAccountId}
+                  onChange={(e) => setConfigAccountId(e.target.value)}
+                  placeholder="1"
+                  className="w-full bg-neutral-950 border border-abucci-border rounded-lg px-4 py-2 text-neutral-100 text-xs focus:outline-none focus:border-abucci-gold transition-colors font-mono"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={savingConfig}
+                className="w-full bg-abucci-gold hover:bg-amber-600 disabled:opacity-40 text-neutral-950 text-xs font-bold py-2.5 px-4 rounded-lg transition-all flex justify-center items-center gap-2 shadow-md shadow-abucci-gold/10"
+              >
+                {savingConfig ? 'Salvando...' : 'Salvar Configurações'}
+              </button>
+            </form>
+
+            {configStatus && (
+              <div className={`mt-3 p-3 rounded-lg border text-xs leading-relaxed ${configStatus.success ? 'bg-emerald-950/20 border-emerald-800/30 text-emerald-300' : 'bg-red-950/20 border-red-800/30 text-red-300'}`}>
+                {configStatus.message}
+              </div>
+            )}
           </div>
         </section>
 

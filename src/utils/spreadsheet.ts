@@ -76,35 +76,63 @@ export function parseSpreadsheet(buffer: Buffer): ParsedClientRow[] {
   let purchaseIdx = -1;
   let vehicleIdx = -1;
 
+  // Primeiro passo: procurar correspondências exatas e fortes
   headers.forEach((header, idx) => {
-    // 1. Nome/Razão Social
-    if (nameIdx === -1 && (header.includes('NOME') || header.includes('CLIENTE') || header.includes('RAZAO SOCIAL') || header.includes('RAZÃO SOCIAL') || header.includes('FANTASIA'))) {
+    // Nome/Cliente
+    if (header === 'NOME' || header === 'CLIENTE' || header === 'RAZAO SOCIAL' || header === 'RAZÃO SOCIAL' || header === 'FANTASIA') {
       nameIdx = idx;
     }
-    // 2. Telefones
-    else if (header.includes('TELEFONE 1') || header.includes('TEL 1') || header === 'TELEFONE') {
-      if (phone1Idx === -1) {
-        phone1Idx = idx;
-      } else if (phone2Idx === -1) {
-        phone2Idx = idx;
-      }
-    } else if (header.includes('TELEFONE 2') || header.includes('TEL 2') || header.includes('CELULAR') || header.includes('WHATSAPP') || header.includes('CONTATO')) {
-      if (phone1Idx === -1) {
-        phone1Idx = idx;
-      } else if (phone2Idx === -1) {
-        phone2Idx = idx;
-      }
+    // Telefones
+    else if (header === 'TELEFONE 1' || header === 'TEL 1' || header === 'TELEFONE') {
+      if (phone1Idx === -1) phone1Idx = idx;
+      else if (phone2Idx === -1) phone2Idx = idx;
     }
-    // 3. Nascimento / Aniversário
-    else if (birthIdx === -1 && (header.includes('NASC') || header.includes('DATA') || header.includes('ANIV') || header.includes('ANIVERSARIO') || header.includes('NASCIMENTO'))) {
+    else if (header === 'TELEFONE 2' || header === 'TEL 2' || header === 'CELULAR' || header === 'WHATSAPP') {
+      if (phone1Idx === -1) phone1Idx = idx;
+      else if (phone2Idx === -1) phone2Idx = idx;
+    }
+    // Nascimento (Forte)
+    else if (header.includes('NASC') || header.includes('ANIV') || header === 'ANIVERSARIO' || header === 'NASCIMENTO' || header.includes('BIRTH')) {
       birthIdx = idx;
     }
-    // 4. Última Compra
-    else if (purchaseIdx === -1 && (header.includes('ULT') || header.includes('COMPRA') || header.includes('EMISSAO') || header.includes('EMISSÃO'))) {
+    // Última Compra (Forte)
+    else if (header.includes('ULT_COMPRA') || header.includes('ULT COMPRA') || header.includes('ULTIMA COMPRA') || header.includes('ÚLTIMA COMPRA') || header === 'ULT') {
       purchaseIdx = idx;
     }
-    // 5. Veículo
-    else if (vehicleIdx === -1 && (header.includes('VEICULO') || header.includes('VEÍCULO') || header.includes('PLACA') || header.includes('CARRO'))) {
+    // Veículo (Forte)
+    else if (header === 'VEICULO' || header === 'VEÍCULO' || header === 'PLACA' || header === 'CARRO') {
+      vehicleIdx = idx;
+    }
+  });
+
+  // Segundo passo: Fallbacks e aproximações se não encontrou no primeiro passo
+  headers.forEach((header, idx) => {
+    // Nome Fallback
+    if (nameIdx === -1 && (header.includes('NOME') || header.includes('CLIENTE') || header.includes('RAZAO') || header.includes('FANTASIA'))) {
+      nameIdx = idx;
+    }
+    // Telefone Fallback
+    if (phone1Idx === -1 && (header.includes('FONE') || header.includes('TEL') || header.includes('CEL') || header.includes('WHATS') || header.includes('CONTATO'))) {
+      phone1Idx = idx;
+    } else if (phone2Idx === -1 && phone1Idx !== idx && (header.includes('FONE') || header.includes('TEL') || header.includes('CEL') || header.includes('WHATS') || header.includes('CONTATO'))) {
+      phone2Idx = idx;
+    }
+    // Nascimento Fallback
+    if (birthIdx === -1 && (header === 'DATA' || header.includes('DATA_NASC') || header.includes('DT_NASC'))) {
+      // Evita mapear data de compra/cadastro como nascimento se houver outras palavras-chave
+      if (!header.includes('COMPRA') && !header.includes('CADASTRO') && !header.includes('SAIDA') && !header.includes('EMISSAO') && !header.includes('ULT')) {
+        birthIdx = idx;
+      }
+    }
+    // Última Compra Fallback
+    if (purchaseIdx === -1 && (header.includes('COMPRA') || header.includes('EMISSAO') || header.includes('EMISSÃO') || header.includes('SAIDA') || header.includes('SAÍDA'))) {
+      // Evita mapear quantidade ou primeira compra
+      if (!header.includes('QTD') && !header.includes('QUANT') && !header.includes('VALOR') && !header.includes('TOTAL') && !header.includes('PRI') && !header.includes('PRIMEIRA')) {
+        purchaseIdx = idx;
+      }
+    }
+    // Veículo Fallback
+    if (vehicleIdx === -1 && (header.includes('VEI') || header.includes('PLACA') || header.includes('CARRO') || header.includes('AUTO'))) {
       vehicleIdx = idx;
     }
   });

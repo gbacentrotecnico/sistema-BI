@@ -318,7 +318,7 @@ export default function MarketingCampaignsPage() {
             {lastImportDate && (
               <div className="mb-4 inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-neutral-950 border border-abucci-border text-[9px] text-neutral-400 font-mono">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Clientes até: {new Date(lastImportDate).toLocaleDateString('pt-BR')} {new Date(lastImportDate).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                Clientes até: {new Date(lastImportDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
               </div>
             )}
 

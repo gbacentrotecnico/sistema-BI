@@ -127,12 +127,13 @@ export async function GET(request: Request) {
     }));
 
     // 3. DATA DA ÚLTIMA IMPORTAÇÃO
-    // Pegamos a maior data de criação na tabela de clientes
+    // Pegamos a maior data de última compra na tabela de clientes (representando a atualização dos dados de compra do ERP)
     const latestClient = await prisma.cliente.findFirst({
-      orderBy: { created_at: 'desc' },
-      select: { created_at: true }
+      where: { data_ultima_compra: { not: null } },
+      orderBy: { data_ultima_compra: 'desc' },
+      select: { data_ultima_compra: true }
     });
-    const lastImportDate = latestClient?.created_at?.toISOString() || null;
+    const lastImportDate = latestClient?.data_ultima_compra?.toISOString() || null;
 
     return NextResponse.json({
       success: true,

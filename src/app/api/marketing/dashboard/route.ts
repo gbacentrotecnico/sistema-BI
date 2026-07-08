@@ -59,7 +59,10 @@ export async function GET(request: Request) {
       telefone: c.telefone,
       telefone2: c.telefone2,
       data_nascimento: c.data_nascimento?.toISOString().split('T')[0],
-      placa_veiculo: c.placa_veiculo
+      data_ultima_compra: c.data_ultima_compra?.toISOString().split('T')[0] || null,
+      placa_veiculo: c.placa_veiculo,
+      created_at: c.created_at,
+      updated_at: c.updated_at
     }));
 
     // 2. REVISÃO DE 90 DIAS
@@ -85,8 +88,11 @@ export async function GET(request: Request) {
       nome: c.nome,
       telefone: c.telefone,
       telefone2: c.telefone2,
+      data_nascimento: c.data_nascimento?.toISOString().split('T')[0] || null,
       data_ultima_compra: c.data_ultima_compra?.toISOString().split('T')[0],
-      placa_veiculo: c.placa_veiculo
+      placa_veiculo: c.placa_veiculo,
+      created_at: c.created_at,
+      updated_at: c.updated_at
     }));
 
     return NextResponse.json({

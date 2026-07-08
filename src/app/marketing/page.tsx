@@ -32,6 +32,7 @@ export default function MarketingCampaignsPage() {
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ success: boolean; message: string } | null>(null);
   const [showSyncModal, setShowSyncModal] = useState(false);
+  const [viewingClient, setViewingClient] = useState<any | null>(null);
   const [activeTab, setActiveTab] = useState<'aniv' | 'rev'>('aniv');
 
   // Estados de Configuração Chatwoot
@@ -464,7 +465,7 @@ export default function MarketingCampaignsPage() {
             </div>
 
             {/* Content Table */}
-            <div className="overflow-x-auto min-h-[340px]">
+            <div className="overflow-x-auto overflow-y-auto max-h-[660px] min-h-[340px] relative">
               {loading ? (
                 <div className="flex flex-col items-center justify-center py-24 gap-3">
                   <svg className="animate-spin h-6 w-6 text-abucci-gold" fill="none" viewBox="0 0 24 24">
@@ -485,7 +486,7 @@ export default function MarketingCampaignsPage() {
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="text-neutral-500 border-b border-abucci-border bg-neutral-950/20 font-mono">
-                      <th className="py-3 px-4 w-12">
+                      <th className="py-3 px-4 w-12 sticky top-0 bg-abucci-card z-10">
                         <input
                           type="checkbox"
                           onChange={(e) => handleSelectAll(e.target.checked)}
@@ -493,10 +494,10 @@ export default function MarketingCampaignsPage() {
                           className="rounded border-abucci-border bg-neutral-950 text-abucci-gold focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
                         />
                       </th>
-                      <th className="py-3 px-3 font-semibold">Cliente</th>
-                      <th className="py-3 px-3 font-semibold">Telefones</th>
-                      <th className="py-3 px-3 font-semibold">Veículo</th>
-                      <th className="py-3 px-3 font-semibold">
+                      <th className="py-3 px-3 font-semibold sticky top-0 bg-abucci-card z-10">Cliente</th>
+                      <th className="py-3 px-3 font-semibold sticky top-0 bg-abucci-card z-10">Telefones</th>
+                      <th className="py-3 px-3 font-semibold sticky top-0 bg-abucci-card z-10">Veículo</th>
+                      <th className="py-3 px-3 font-semibold sticky top-0 bg-abucci-card z-10">
                         {activeTab === 'aniv' ? 'Nascimento' : 'Última Compra'}
                       </th>
                     </tr>
@@ -515,10 +516,16 @@ export default function MarketingCampaignsPage() {
                             className="rounded border-abucci-border bg-neutral-950 text-abucci-gold focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
                           />
                         </td>
-                        <td className="py-3.5 px-3 font-semibold text-white truncate max-w-[200px]">
+                        <td 
+                          onClick={() => setViewingClient(item)}
+                          className="py-3.5 px-3 font-semibold text-white truncate max-w-[200px] cursor-pointer hover:text-abucci-gold transition-colors"
+                        >
                           {item.nome}
                         </td>
-                        <td className="py-3.5 px-3 text-neutral-300 font-mono">
+                        <td 
+                          onClick={() => setViewingClient(item)}
+                          className="py-3.5 px-3 text-neutral-300 font-mono cursor-pointer"
+                        >
                           {item.telefone}
                           {item.telefone2 && (
                             <span className="text-[10px] text-neutral-500 block">
@@ -526,13 +533,19 @@ export default function MarketingCampaignsPage() {
                             </span>
                           )}
                         </td>
-                        <td className="py-3.5 px-3 text-neutral-400 font-mono">
+                        <td 
+                          onClick={() => setViewingClient(item)}
+                          className="py-3.5 px-3 text-neutral-400 font-mono cursor-pointer"
+                        >
                           {item.placa_veiculo || '-'}
                         </td>
-                        <td className="py-3.5 px-3 text-neutral-400 font-mono">
+                        <td 
+                          onClick={() => setViewingClient(item)}
+                          className="py-3.5 px-3 text-neutral-400 font-mono cursor-pointer"
+                        >
                           {activeTab === 'aniv' 
-                            ? (item.data_nascimento ? new Date(item.data_nascimento).toLocaleDateString('pt-BR') : '-') 
-                            : (item.data_ultima_compra ? new Date(item.data_ultima_compra).toLocaleDateString('pt-BR') : '-')
+                            ? (item.data_nascimento ? new Date(item.data_nascimento).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '-') 
+                            : (item.data_ultima_compra ? new Date(item.data_ultima_compra).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '-')
                           }
                         </td>
                       </tr>
@@ -599,6 +612,89 @@ export default function MarketingCampaignsPage() {
                       Sincronizando...
                     </>
                   ) : 'Exportar Lista'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Client Detail Modal */}
+      {viewingClient && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4">
+          <div className="bg-abucci-card border border-abucci-border rounded-xl w-full max-w-lg p-6 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-abucci-gold" />
+            
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <span className="text-[10px] uppercase font-bold text-abucci-gold font-mono tracking-widest block mb-1">
+                  Detalhes do Cliente
+                </span>
+                <h3 className="text-lg font-bold text-white font-display leading-tight">
+                  {viewingClient.nome}
+                </h3>
+              </div>
+              <button 
+                onClick={() => setViewingClient(null)}
+                className="text-neutral-500 hover:text-white transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-neutral-950/60 p-3 rounded-lg border border-abucci-border/40">
+                  <span className="text-[10px] text-neutral-500 uppercase font-mono block mb-0.5">Telefone Principal</span>
+                  <span className="text-xs text-white font-mono">{viewingClient.telefone || '-'}</span>
+                </div>
+                <div className="bg-neutral-950/60 p-3 rounded-lg border border-abucci-border/40">
+                  <span className="text-[10px] text-neutral-500 uppercase font-mono block mb-0.5">Telefone Alternativo</span>
+                  <span className="text-xs text-white font-mono">{viewingClient.telefone2 || '-'}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-neutral-950/60 p-3 rounded-lg border border-abucci-border/40">
+                  <span className="text-[10px] text-neutral-500 uppercase font-mono block mb-0.5">Data de Nascimento</span>
+                  <span className="text-xs text-white font-mono">
+                    {viewingClient.data_nascimento ? new Date(viewingClient.data_nascimento).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '-'}
+                  </span>
+                </div>
+                <div className="bg-neutral-950/60 p-3 rounded-lg border border-abucci-border/40">
+                  <span className="text-[10px] text-neutral-500 uppercase font-mono block mb-0.5">Última Compra</span>
+                  <span className="text-xs text-white font-mono">
+                    {viewingClient.data_ultima_compra ? new Date(viewingClient.data_ultima_compra).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '-'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-neutral-950/60 p-3 rounded-lg border border-abucci-border/40 col-span-2">
+                  <span className="text-[10px] text-neutral-500 uppercase font-mono block mb-0.5">Placa do Veículo</span>
+                  <span className="text-xs text-white font-mono uppercase font-semibold">{viewingClient.placa_veiculo || '-'}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 text-neutral-500 font-mono text-[9px] pt-2 border-t border-abucci-border/40">
+                <div>
+                  <span>Cadastrado em: </span>
+                  <span className="text-neutral-400">{viewingClient.created_at ? new Date(viewingClient.created_at).toLocaleString('pt-BR') : '-'}</span>
+                </div>
+                <div className="text-right">
+                  <span>Última atualização: </span>
+                  <span className="text-neutral-400">{viewingClient.updated_at ? new Date(viewingClient.updated_at).toLocaleString('pt-BR') : '-'}</span>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  onClick={() => setViewingClient(null)}
+                  className="w-full bg-neutral-900 border border-abucci-border hover:bg-neutral-800 active:scale-[0.98] text-neutral-300 text-xs font-bold py-2.5 rounded-lg transition-all"
+                >
+                  Fechar Detalhes
                 </button>
               </div>
             </div>

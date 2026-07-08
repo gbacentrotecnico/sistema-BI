@@ -101,8 +101,8 @@ export async function POST(request: Request) {
           }
 
           const createData = await createRes.json();
-          // Chatwoot retorna o contato criado no nó 'payload' ou diretamente
-          const createdContact = createData.payload || createData;
+          // Chatwoot retorna o contato criado no nó 'payload.contact', 'payload' ou diretamente
+          const createdContact = createData.payload?.contact || createData.payload || createData;
           contactId = createdContact.id;
           logs.push(`Novo contato criado no Chatwoot para ${client.nome} (ID: ${contactId})`);
         }

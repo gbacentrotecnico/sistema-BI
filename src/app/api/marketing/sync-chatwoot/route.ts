@@ -53,9 +53,12 @@ export async function POST(request: Request) {
 
     const cleanUrl = chatwootUrl.endsWith('/') ? chatwootUrl.slice(0, -1) : chatwootUrl;
 
+    const cleanTag = tag.trim().toLowerCase();
+    const cleanBIMarketing = 'bi_marketing';
+
     // Garante que as etiquetas existam globalmente no painel do Chatwoot antes de associá-las
-    await createLabelGlobally(cleanUrl, String(chatwootAccountId), chatwootToken, tag);
-    await createLabelGlobally(cleanUrl, String(chatwootAccountId), chatwootToken, 'BI_Marketing');
+    await createLabelGlobally(cleanUrl, String(chatwootAccountId), chatwootToken, cleanTag);
+    await createLabelGlobally(cleanUrl, String(chatwootAccountId), chatwootToken, cleanBIMarketing);
 
     // Busca os clientes no banco de dados local
     const clients = await prisma.cliente.findMany({
@@ -142,7 +145,7 @@ export async function POST(request: Request) {
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              labels: [tag.trim(), 'BI_Marketing']
+              labels: [cleanTag, cleanBIMarketing]
             })
           });
 

@@ -1,6 +1,27 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/config/prisma';
 
+async function createLabelGlobally(cleanUrl: string, accountId: string, token: string, title: string) {
+  try {
+    const url = `${cleanUrl}/api/v1/accounts/${accountId}/labels`;
+    await fetch(url, {
+      method: 'POST',
+      headers: {
+        'api_access_token': token,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        title: title.trim(),
+        description: 'Criada automaticamente pelo Sistema BI',
+        color: '#f39c12',
+        show_on_sidebar: true
+      })
+    });
+  } catch (err) {
+    console.error(`Erro ao criar etiqueta global ${title}:`, err);
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const { clientIds, tag } = await request.json();
@@ -31,6 +52,10 @@ export async function POST(request: Request) {
     }
 
     const cleanUrl = chatwootUrl.endsWith('/') ? chatwootUrl.slice(0, -1) : chatwootUrl;
+
+    // Garante que as etiquetas existam globalmente no painel do Chatwoot antes de associá-las
+    await createLabelGlobally(cleanUrl, String(chatwootAccountId), chatwootToken, tag);
+    await createLabelGlobally(cleanUrl, String(chatwootAccountId), chatwootToken, 'BI_Marketing');
 
     // Busca os clientes no banco de dados local
     const clients = await prisma.cliente.findMany({

@@ -22,33 +22,42 @@ export async function POST(request: Request) {
     let inserted = 0;
     let updated = 0;
 
-    // Processa de forma sequencial ou chunks para evitar sobrecarregar o banco
+    // Carrega todos os clientes existentes em memória para busca rápida por telefone
+    const existingDbClients = await prisma.cliente.findMany({
+      select: {
+        id: true,
+        telefone: true,
+        telefone2: true,
+        nome: true,
+        data_nascimento: true,
+        data_ultima_compra: true,
+        placa_veiculo: true
+      }
+    });
+
+    const clientByPhone = new Map<string, typeof existingDbClients[0]>();
+    for (const c of existingDbClients) {
+      if (c.telefone) clientByPhone.set(c.telefone, c);
+      if (c.telefone2) clientByPhone.set(c.telefone2, c);
+    }
+
+    const newClientsToCreate: any[] = [];
+    const updatePromises: any[] = [];
+
     for (const row of clientRows) {
       if (!row.telefone) continue;
 
-      // Procura cliente existente por telefone principal ou secundário
-      const existingClient = await prisma.cliente.findFirst({
-        where: {
-          OR: [
-            { telefone: row.telefone },
-            { telefone2: row.telefone },
-            ...(row.telefone2 ? [
-              { telefone: row.telefone2 },
-              { telefone2: row.telefone2 }
-            ] : [])
-          ]
-        }
-      });
+      const existingClient = clientByPhone.get(row.telefone) || (row.telefone2 ? clientByPhone.get(row.telefone2) : null);
 
       if (existingClient) {
         const updateData: any = {};
 
-        // 1. Nome: atualizar apenas se o nome existente for vazio ou se o novo nome for mais completo
+        // 1. Nome: atualizar apenas se o nome existente for vazio ou se o novo for mais longo/completo
         if (row.nome && (!existingClient.nome || existingClient.nome.length < row.nome.length)) {
           updateData.nome = row.nome;
         }
 
-        // 2. Data de Nascimento: atualizar se não houver ou se for inválida
+        // 2. Data de Nascimento: atualizar se não houver
         if (row.dataNascimento && !existingClient.data_nascimento) {
           updateData.data_nascimento = row.dataNascimento;
         }
@@ -70,27 +79,56 @@ export async function POST(request: Request) {
           updateData.telefone2 = row.telefone2;
         }
 
-        // Se houver algum campo para atualizar
+        // Se houver algum campo para atualizar, cria a promise correspondente
         if (Object.keys(updateData).length > 0) {
-          await prisma.cliente.update({
-            where: { id: existingClient.id },
-            data: updateData
-          });
+          updatePromises.push(
+            prisma.cliente.update({
+              where: { id: existingClient.id },
+              data: updateData
+            })
+          );
           updated++;
         }
       } else {
-        await prisma.cliente.create({
-          data: {
-            nome: row.nome || 'Cliente Importado',
-            telefone: row.telefone,
-            telefone2: row.telefone2 || null,
-            data_nascimento: row.dataNascimento,
-            data_ultima_compra: row.dataUltimaCompra,
-            placa_veiculo: row.placaVeiculo
-          }
+        newClientsToCreate.push({
+          nome: row.nome || 'Cliente Importado',
+          telefone: row.telefone,
+          telefone2: row.telefone2 || null,
+          data_nascimento: row.dataNascimento,
+          data_ultima_compra: row.dataUltimaCompra,
+          placa_veiculo: row.placaVeiculo
         });
+
+        // Registrar no map temporário para evitar duplicados da mesma planilha
+        const tempClient = {
+          id: 0,
+          nome: row.nome,
+          telefone: row.telefone,
+          telefone2: row.telefone2 || null,
+          data_nascimento: row.dataNascimento,
+          data_ultima_compra: row.dataUltimaCompra,
+          placa_veiculo: row.placaVeiculo
+        };
+        clientByPhone.set(row.telefone, tempClient);
+        if (row.telefone2) clientByPhone.set(row.telefone2, tempClient);
+
         inserted++;
       }
+    }
+
+    // Executa as inserções em lote
+    if (newClientsToCreate.length > 0) {
+      await prisma.cliente.createMany({
+        data: newClientsToCreate,
+        skipDuplicates: true
+      });
+    }
+
+    // Executa as atualizações em lotes de transação (ex: 200 por vez)
+    const chunkSize = 200;
+    for (let i = 0; i < updatePromises.length; i += chunkSize) {
+      const chunk = updatePromises.slice(i, i + chunkSize);
+      await prisma.$transaction(chunk);
     }
 
     return NextResponse.json({

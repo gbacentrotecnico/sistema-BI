@@ -16,18 +16,18 @@ function getWeekInterval(now: Date) {
   return { monday, sunday };
 }
 
-function isBirthdateInWeek(birthdate: Date, startOfWeek: Date, endOfWeek: Date): boolean {
+function isBirthdateInInterval(birthdate: Date, start: Date, end: Date): boolean {
   const bMonth = birthdate.getMonth();
   const bDay = birthdate.getDate();
 
-  // Testa no ano da segunda-feira
-  const testDate = new Date(startOfWeek.getFullYear(), bMonth, bDay);
-  if (testDate >= startOfWeek && testDate <= endOfWeek) return true;
+  // Testa no ano da data de início
+  const testDate = new Date(start.getFullYear(), bMonth, bDay);
+  if (testDate >= start && testDate <= end) return true;
 
-  // Se a semana cruzar a virada de ano
-  if (startOfWeek.getFullYear() !== endOfWeek.getFullYear()) {
-    const testDateNext = new Date(endOfWeek.getFullYear(), bMonth, bDay);
-    if (testDateNext >= startOfWeek && testDateNext <= endOfWeek) return true;
+  // Se o intervalo cruzar a virada de ano
+  if (start.getFullYear() !== end.getFullYear()) {
+    const testDateNext = new Date(end.getFullYear(), bMonth, bDay);
+    if (testDateNext >= start && testDateNext <= end) return true;
   }
 
   return false;
@@ -36,12 +36,50 @@ function isBirthdateInWeek(birthdate: Date, startOfWeek: Date, endOfWeek: Date):
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
+    
+    // Obter parâmetros de data das query params
     const selectedDateStr = url.searchParams.get('date') || new Date().toISOString().split('T')[0];
+    
+    // Filtro Aniversariantes
+    const anivStartDateStr = url.searchParams.get('anivStartDate');
+    const anivEndDateStr = url.searchParams.get('anivEndDate');
+    
+    // Filtro Revisão
+    const revStartDateStr = url.searchParams.get('revStartDate');
+    const revEndDateStr = url.searchParams.get('revEndDate');
 
-    const today = new Date(selectedDateStr + 'T00:00:00');
-    const { monday, sunday } = getWeekInterval(new Date(today));
+    // Inicializar intervalos padrões se não informados
+    let anivStart: Date;
+    let anivEnd: Date;
+    
+    if (anivStartDateStr && anivEndDateStr) {
+      anivStart = new Date(anivStartDateStr + 'T00:00:00');
+      anivEnd = new Date(anivEndDateStr + 'T23:59:59');
+    } else {
+      const today = new Date(selectedDateStr + 'T00:00:00');
+      const { monday, sunday } = getWeekInterval(today);
+      anivStart = monday;
+      anivEnd = sunday;
+    }
 
-    // 1. ANIVERSARIANTES DA SEMANA
+    let revStartOfPurchase: Date;
+    let revEndOfPurchase: Date;
+
+    if (revStartDateStr && revEndDateStr) {
+      const rStart = new Date(revStartDateStr + 'T00:00:00');
+      const rEnd = new Date(revEndDateStr + 'T23:59:59');
+      
+      // Data de compra alvo é 90 dias atrás do período selecionado
+      revStartOfPurchase = new Date(rStart.getTime() - 90 * 24 * 60 * 60 * 1000);
+      revEndOfPurchase = new Date(rEnd.getTime() - 90 * 24 * 60 * 60 * 1000);
+    } else {
+      const referenceDate = new Date(selectedDateStr + 'T00:00:00');
+      const purchaseTargetDate = new Date(referenceDate.getTime() - 90 * 24 * 60 * 60 * 1000);
+      revStartOfPurchase = new Date(purchaseTargetDate.getFullYear(), purchaseTargetDate.getMonth(), purchaseTargetDate.getDate(), 0, 0, 0);
+      revEndOfPurchase = new Date(purchaseTargetDate.getFullYear(), purchaseTargetDate.getMonth(), purchaseTargetDate.getDate(), 23, 59, 59, 999);
+    }
+
+    // 1. ANIVERSARIANTES
     // Buscamos todos os clientes com data de nascimento cadastrada e filtramos em memória
     const clientsWithBirthdays = await prisma.cliente.findMany({
       where: {
@@ -52,7 +90,7 @@ export async function GET(request: Request) {
 
     const aniversariantes = clientsWithBirthdays.filter(c => {
       if (!c.data_nascimento) return false;
-      return isBirthdateInWeek(new Date(c.data_nascimento), monday, sunday);
+      return isBirthdateInInterval(new Date(c.data_nascimento), anivStart, anivEnd);
     }).map(c => ({
       id: c.id,
       nome: c.nome,
@@ -66,18 +104,11 @@ export async function GET(request: Request) {
     }));
 
     // 2. REVISÃO DE 90 DIAS
-    // Filtro por data de última compra correspondente a exatos 90 dias atrás da data selecionada
-    const referenceDate = new Date(selectedDateStr);
-    const purchaseTargetDate = new Date(referenceDate.getTime() - 90 * 24 * 60 * 60 * 1000);
-    
-    const startOfPurchaseDay = new Date(purchaseTargetDate.getFullYear(), purchaseTargetDate.getMonth(), purchaseTargetDate.getDate(), 0, 0, 0);
-    const endOfPurchaseDay = new Date(purchaseTargetDate.getFullYear(), purchaseTargetDate.getMonth(), purchaseTargetDate.getDate(), 23, 59, 59, 999);
-
     const revisionClients = await prisma.cliente.findMany({
       where: {
         data_ultima_compra: {
-          gte: startOfPurchaseDay,
-          lte: endOfPurchaseDay
+          gte: revStartOfPurchase,
+          lte: revEndOfPurchase
         }
       },
       orderBy: { nome: 'asc' }
@@ -95,13 +126,23 @@ export async function GET(request: Request) {
       updated_at: c.updated_at
     }));
 
+    // 3. DATA DA ÚLTIMA IMPORTAÇÃO
+    // Pegamos a maior data de criação na tabela de clientes
+    const latestClient = await prisma.cliente.findFirst({
+      orderBy: { created_at: 'desc' },
+      select: { created_at: true }
+    });
+    const lastImportDate = latestClient?.created_at?.toISOString() || null;
+
     return NextResponse.json({
       success: true,
       meta: {
-        weekStart: monday.toISOString().split('T')[0],
-        weekEnd: sunday.toISOString().split('T')[0],
+        anivStart: anivStart.toISOString().split('T')[0],
+        anivEnd: anivEnd.toISOString().split('T')[0],
+        revStartOfPurchase: revStartOfPurchase.toISOString().split('T')[0],
+        revEndOfPurchase: revEndOfPurchase.toISOString().split('T')[0],
         selectedDate: selectedDateStr,
-        purchaseTargetDate: purchaseTargetDate.toISOString().split('T')[0]
+        lastImportDate
       },
       aniversariantes,
       revisoes

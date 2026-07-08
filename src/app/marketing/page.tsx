@@ -12,10 +12,30 @@ interface ClientMarketing {
   placa_veiculo?: string | null;
 }
 
+function getWeekRange() {
+  const now = new Date();
+  const day = now.getDay();
+  const diffToMonday = now.getDate() - day + (day === 0 ? -6 : 1);
+  const monday = new Date(now.setDate(diffToMonday));
+  monday.setHours(0, 0, 0, 0);
+
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  sunday.setHours(23, 59, 59, 999);
+
+  return {
+    start: monday.toISOString().split('T')[0],
+    end: sunday.toISOString().split('T')[0]
+  };
+}
+
 export default function MarketingCampaignsPage() {
-  const [selectedDate, setSelectedDate] = useState<string>(() => {
-    return new Date().toISOString().split('T')[0];
-  });
+  const [anivStartDate, setAnivStartDate] = useState(() => getWeekRange().start);
+  const [anivEndDate, setAnivEndDate] = useState(() => getWeekRange().end);
+  const [revStartDate, setRevStartDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [revEndDate, setRevEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [lastImportDate, setLastImportDate] = useState<string | null>(null);
+
   const [aniversariantes, setAniversariantes] = useState<ClientMarketing[]>([]);
   const [revisoes, setRevisoes] = useState<ClientMarketing[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,16 +63,22 @@ export default function MarketingCampaignsPage() {
   const [configStatus, setConfigStatus] = useState<{ success: boolean; message: string } | null>(null);
 
   // Carrega dados da API
-  const loadDashboardData = useCallback(async (date: string) => {
+  const loadDashboardData = useCallback(async (
+    aStart: string,
+    aEnd: string,
+    rStart: string,
+    rEnd: string
+  ) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/marketing/dashboard?date=${date}`);
+      const res = await fetch(`/api/marketing/dashboard?anivStartDate=${aStart}&anivEndDate=${aEnd}&revStartDate=${rStart}&revEndDate=${rEnd}`);
       if (!res.ok) throw new Error('Erro ao carregar dados do servidor');
       const data = await res.json();
       if (data.success) {
         setAniversariantes(data.aniversariantes || []);
         setRevisoes(data.revisoes || []);
+        setLastImportDate(data.meta?.lastImportDate || null);
         setSelectedClients({});
       } else {
         throw new Error(data.error || 'Erro desconhecido');
@@ -65,8 +91,8 @@ export default function MarketingCampaignsPage() {
   }, []);
 
   useEffect(() => {
-    loadDashboardData(selectedDate);
-  }, [selectedDate, loadDashboardData]);
+    loadDashboardData(anivStartDate, anivEndDate, revStartDate, revEndDate);
+  }, [anivStartDate, anivEndDate, revStartDate, revEndDate, loadDashboardData]);
 
   // Carrega configurações da API ao iniciar
   useEffect(() => {
@@ -139,7 +165,7 @@ export default function MarketingCampaignsPage() {
           message: `Planilha importada com sucesso! Inseridos: ${data.inserted} | Atualizados: ${data.updated} de ${data.total} contatos.`,
         });
         setUploadFile(null);
-        loadDashboardData(selectedDate);
+        loadDashboardData(anivStartDate, anivEndDate, revStartDate, revEndDate);
       } else {
         setUploadStatus({
           success: false,
@@ -197,7 +223,7 @@ export default function MarketingCampaignsPage() {
     if (activeTab === 'aniv') {
       setSyncTag(`Aniversariantes_${currentMonth}_Semana_${Math.ceil(today.getDate() / 7)}`);
     } else {
-      setSyncTag(`Revisao_90d_${selectedDate}`);
+      setSyncTag(`Revisao_90d_${revStartDate}_a_${revEndDate}`);
     }
     setSyncResult(null);
     setShowSyncModal(true);
@@ -282,12 +308,20 @@ export default function MarketingCampaignsPage() {
           {/* File Upload Box */}
           <div className="bg-abucci-card border border-abucci-border rounded-xl p-6 shadow-xl relative overflow-hidden">
             <div className="absolute top-0 left-0 w-1 h-full bg-abucci-gold" />
-            <h2 className="text-md font-bold text-white mb-3 flex items-center gap-2 font-display">
+            <h2 className="text-md font-bold text-white mb-1 flex items-center gap-2 font-display">
               <svg className="w-5 h-5 text-abucci-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
               </svg>
               Upload de Planilha
             </h2>
+
+            {lastImportDate && (
+              <div className="mb-4 inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-neutral-950 border border-abucci-border text-[9px] text-neutral-400 font-mono">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Clientes até: {new Date(lastImportDate).toLocaleDateString('pt-BR')} {new Date(lastImportDate).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+              </div>
+            )}
+
             <p className="text-xs text-neutral-400 mb-4 leading-relaxed">
               Arraste ou selecione arquivos **XLSX** ou **CSV**. Nosso sistema mapeará automaticamente os dados de Nome, Telefones e datas de aniversário/compra.
             </p>
@@ -333,32 +367,6 @@ export default function MarketingCampaignsPage() {
                 {uploadStatus.message}
               </div>
             )}
-          </div>
-
-          {/* Configuration / Date Filter */}
-          <div className="bg-abucci-card border border-abucci-border rounded-xl p-6 shadow-xl">
-            <h2 className="text-md font-bold text-white mb-4 flex items-center gap-2 font-display">
-              <svg className="w-5 h-5 text-abucci-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              Filtros da Campanha
-            </h2>
-            <div className="space-y-3">
-              <div>
-                <label className="text-[10px] uppercase font-bold text-neutral-400 block mb-1">
-                  Data de Referência (Revisão 90d)
-                </label>
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full bg-neutral-950 border border-abucci-border rounded-lg px-4 py-2 text-neutral-100 text-xs focus:outline-none focus:border-abucci-gold transition-colors font-mono"
-                />
-              </div>
-              <span className="text-[10px] text-neutral-500 block leading-relaxed">
-                Modifique a data para consultar e agendar campanhas de revisão de 90 dias com antecedência.
-              </span>
-            </div>
           </div>
 
           {/* Chatwoot API Configuration */}
@@ -430,19 +438,59 @@ export default function MarketingCampaignsPage() {
           <div className="bg-abucci-card border border-abucci-border rounded-xl shadow-xl flex flex-col overflow-hidden">
             
             {/* Custom Tab selectors */}
-            <div className="flex border-b border-abucci-border bg-neutral-950/20 p-2 gap-2">
-              <button
-                onClick={() => { setActiveTab('aniv'); setSelectedClients({}); }}
-                className={`flex-1 text-center py-2.5 rounded-lg text-xs font-semibold font-display transition-all ${activeTab === 'aniv' ? 'bg-gradient-to-r from-abucci-gold/15 to-transparent text-abucci-gold border-b-2 border-abucci-gold font-bold' : 'text-neutral-400 hover:text-neutral-200'}`}
-              >
-                🎂 Aniversariantes da Semana ({aniversariantes.length})
-              </button>
-              <button
-                onClick={() => { setActiveTab('rev'); setSelectedClients({}); }}
-                className={`flex-1 text-center py-2.5 rounded-lg text-xs font-semibold font-display transition-all ${activeTab === 'rev' ? 'bg-gradient-to-r from-abucci-gold/15 to-transparent text-abucci-gold border-b-2 border-abucci-gold font-bold' : 'text-neutral-400 hover:text-neutral-200'}`}
-              >
-                🚗 Revisão de 90 Dias ({revisoes.length})
-              </button>
+            <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center border-b border-abucci-border bg-neutral-950/20 p-2 gap-3">
+              <div className="flex flex-1 gap-2">
+                <button
+                  onClick={() => { setActiveTab('aniv'); setSelectedClients({}); }}
+                  className={`flex-1 text-center py-2 rounded-lg text-xs font-semibold font-display transition-all ${activeTab === 'aniv' ? 'bg-gradient-to-r from-abucci-gold/15 to-transparent text-abucci-gold border-b-2 border-abucci-gold font-bold' : 'text-neutral-400 hover:text-neutral-200'}`}
+                >
+                  🎂 Aniversariantes ({aniversariantes.length})
+                </button>
+                <button
+                  onClick={() => { setActiveTab('rev'); setSelectedClients({}); }}
+                  className={`flex-1 text-center py-2 rounded-lg text-xs font-semibold font-display transition-all ${activeTab === 'rev' ? 'bg-gradient-to-r from-abucci-gold/15 to-transparent text-abucci-gold border-b-2 border-abucci-gold font-bold' : 'text-neutral-400 hover:text-neutral-200'}`}
+                >
+                  🚗 Revisão 90d ({revisoes.length})
+                </button>
+              </div>
+
+              {/* Filtro de datas por aba */}
+              <div className="flex items-center gap-2 px-2 pb-1 md:pb-0">
+                <span className="text-[10px] uppercase font-bold text-neutral-500 font-mono hidden sm:inline">Período:</span>
+                {activeTab === 'aniv' ? (
+                  <>
+                    <input
+                      type="date"
+                      value={anivStartDate}
+                      onChange={(e) => setAnivStartDate(e.target.value)}
+                      className="bg-neutral-950 border border-abucci-border rounded px-2.5 py-1 text-[11px] text-neutral-200 focus:outline-none focus:border-abucci-gold font-mono"
+                    />
+                    <span className="text-neutral-600 text-xs font-mono">a</span>
+                    <input
+                      type="date"
+                      value={anivEndDate}
+                      onChange={(e) => setAnivEndDate(e.target.value)}
+                      className="bg-neutral-950 border border-abucci-border rounded px-2.5 py-1 text-[11px] text-neutral-200 focus:outline-none focus:border-abucci-gold font-mono"
+                    />
+                  </>
+                ) : (
+                  <>
+                    <input
+                      type="date"
+                      value={revStartDate}
+                      onChange={(e) => setRevStartDate(e.target.value)}
+                      className="bg-neutral-950 border border-abucci-border rounded px-2.5 py-1 text-[11px] text-neutral-200 focus:outline-none focus:border-abucci-gold font-mono"
+                    />
+                    <span className="text-neutral-600 text-xs font-mono">a</span>
+                    <input
+                      type="date"
+                      value={revEndDate}
+                      onChange={(e) => setRevEndDate(e.target.value)}
+                      className="bg-neutral-950 border border-abucci-border rounded px-2.5 py-1 text-[11px] text-neutral-200 focus:outline-none focus:border-abucci-gold font-mono"
+                    />
+                  </>
+                )}
+              </div>
             </div>
 
             {/* List Action Bar */}

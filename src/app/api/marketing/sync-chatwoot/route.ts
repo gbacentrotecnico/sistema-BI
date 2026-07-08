@@ -53,7 +53,12 @@ export async function POST(request: Request) {
 
     const cleanUrl = chatwootUrl.endsWith('/') ? chatwootUrl.slice(0, -1) : chatwootUrl;
 
-    const cleanTag = tag.trim().toLowerCase();
+    // Converte espaços e caracteres especiais em underscores para garantir aceitação do Chatwoot
+    const cleanTag = tag
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
     const cleanBIMarketing = 'bi_marketing';
 
     // Garante que as etiquetas existam globalmente no painel do Chatwoot antes de associá-las

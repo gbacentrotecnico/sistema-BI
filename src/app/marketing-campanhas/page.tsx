@@ -50,31 +50,16 @@ interface GestorStats {
   fim: string;
 }
 
-interface OverlapStats {
-  dias: number;
-  anderson: {
-    conversas: number;
-    investimento: number;
-    custoConversa: number;
-  };
-  fulvio: {
-    conversas: number;
-    investimento: number;
-    custoConversa: number;
-  };
-}
-
 interface GestoresPayload {
   anderson: GestorStats | null;
   fulvio: GestorStats | null;
-  overlap: OverlapStats | null;
+  overlap: { dias: number } | null;
 }
 
 export default function MarketingCampanhasPage() {
   const [activeMenuTab, setActiveMenuTab] = useState<'master' | 'gestores'>('master');
   const [startDate, setStartDate] = useState('2026-07-01');
   const [endDate, setEndDate] = useState('2026-07-10');
-  const [storeFilter, setStoreFilter] = useState<'all' | 'mecanica' | 'ct'>('mecanica');
   
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<SummaryObj | null>(null);
@@ -85,7 +70,7 @@ export default function MarketingCampanhasPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/bi/marketing?startDate=${startDate}&endDate=${endDate}&store=${storeFilter}`);
+      const res = await fetch(`/api/bi/marketing?startDate=${startDate}&endDate=${endDate}`);
       const data = await res.json();
       if (data.success) {
         setSummary(data.summary);
@@ -98,7 +83,7 @@ export default function MarketingCampanhasPage() {
     } finally {
       setLoading(false);
     }
-  }, [startDate, endDate, storeFilter]);
+  }, [startDate, endDate]);
 
   useEffect(() => {
     loadData();
@@ -151,50 +136,33 @@ export default function MarketingCampanhasPage() {
               onClick={() => setActiveMenuTab('gestores')}
               className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeMenuTab === 'gestores' ? 'bg-[#f39c12] text-neutral-950 shadow-md' : 'text-neutral-400 hover:text-neutral-200'}`}
             >
-              ⚖️ Análise dos Gestores
+              ⚖️ Análise dos Gestores (Período Concorrente)
             </button>
           </div>
         </div>
 
-        {/* Master Report Filters */}
+        {/* Master Report Date Filter */}
         {activeMenuTab === 'master' && (
-          <div className="flex flex-wrap items-center gap-4 bg-neutral-950/60 p-2.5 rounded-xl border border-[#1e2230]">
-            <div className="flex items-center gap-2">
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="bg-[#12141c] border border-[#1e2230] rounded px-3 py-1.5 text-xs text-white font-mono focus:outline-none"
-              />
-              <span className="text-neutral-600 text-xs font-mono">a</span>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="bg-[#12141c] border border-[#1e2230] rounded px-3 py-1.5 text-xs text-white font-mono focus:outline-none"
-              />
-            </div>
-
-            <div className="flex bg-[#12141c] p-1 rounded-lg border border-[#1e2230] gap-1">
-              <button
-                onClick={() => setStoreFilter('mecanica')}
-                className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${storeFilter === 'mecanica' ? 'bg-[#f39c12] text-neutral-950 shadow-md' : 'text-neutral-400 hover:text-neutral-200'}`}
-              >
-                Mecânica (BM Fulvio)
-              </button>
-              <button
-                onClick={() => setStoreFilter('ct')}
-                className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${storeFilter === 'ct' ? 'bg-[#f39c12] text-neutral-950 shadow-md' : 'text-neutral-400 hover:text-neutral-200'}`}
-              >
-                Centro Técnico (BM Anderson)
-              </button>
-            </div>
+          <div className="flex items-center gap-2 bg-neutral-950/60 p-2.5 rounded-xl border border-[#1e2230]">
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="bg-[#12141c] border border-[#1e2230] rounded px-3 py-1.5 text-xs text-white font-mono focus:outline-none"
+            />
+            <span className="text-neutral-600 text-xs font-mono font-semibold">a</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="bg-[#12141c] border border-[#1e2230] rounded px-3 py-1.5 text-xs text-white font-mono focus:outline-none"
+            />
           </div>
         )}
       </header>
 
       {loading ? (
-        <div className="text-center py-32 text-xs text-neutral-500 font-mono">Calculando métricas...</div>
+        <div className="text-center py-32 text-xs text-neutral-500 font-mono">Processando métricas unificadas...</div>
       ) : activeMenuTab === 'master' ? (
         <div className="space-y-8 animate-fade-in">
           {/* 2. KPI Cards Grid */}
@@ -421,33 +389,45 @@ export default function MarketingCampanhasPage() {
         </div>
       ) : (
         <div className="space-y-8 animate-fade-in max-w-5xl mx-auto">
-          {/* Gestores Comparison Tab Content */}
+          {/* Header information for Overlap */}
+          <div className="bg-neutral-950/40 border border-[#1e2230] p-4 rounded-xl text-center font-mono">
+            <span className="text-xs text-neutral-400 block">DURAÇÃO DO PERÍODO CONCORRENTE ATIVO</span>
+            <span className="text-base font-extrabold text-[#f39c12] mt-1 block">
+              {gestores?.anderson?.inicio} a {gestores?.anderson?.fim} ({gestores?.overlap?.dias} dias)
+            </span>
+            <p className="text-[10px] text-neutral-500 mt-2">
+              As estatísticas abaixo são isoladas exclusivamente para o período em que ambas as BMs rodaram juntas.
+            </p>
+          </div>
+
+          {/* Gestores Side-by-Side Comparison */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Column 1: Anderson */}
             <div className="bg-[#12141c] border border-[#1e2230] rounded-xl p-6 shadow-xl relative overflow-hidden">
               <div className="absolute top-0 left-0 w-1.5 h-full bg-[#f39c12]/40" />
               <h2 className="text-lg font-bold text-white font-display mb-1">Anderson (Histórico)</h2>
               <span className="text-[10px] text-neutral-500 font-mono block mb-5">
-                Período: {gestores?.anderson?.inicio} a {gestores?.anderson?.fim} ({gestores?.anderson?.diasAtivos} dias ativos)
+                Período Concorrente ({gestores?.anderson?.diasAtivos} dias)
               </span>
 
-              <div className="grid grid-cols-2 gap-6 font-mono">
-                <div className="bg-neutral-950/50 p-4 rounded-lg border border-[#1e2230]/40">
-                  <span className="text-[9px] text-neutral-500 uppercase block font-bold">Investimento Total</span>
-                  <span className="text-xl font-bold text-white block mt-1">R$ {gestores?.anderson?.investimento.toLocaleString('pt-BR')}</span>
+              <div className="grid grid-cols-2 gap-4 font-mono">
+                <div className="bg-neutral-950/50 p-4 rounded-lg border border-[#1e2230]/40 col-span-2">
+                  <span className="text-[9px] text-neutral-500 uppercase block font-bold">Investimento no Período</span>
+                  <span className="text-2xl font-black text-white block mt-1">
+                    R$ {gestores?.anderson?.investimento.toLocaleString('pt-BR')}
+                  </span>
                 </div>
                 <div className="bg-neutral-950/50 p-4 rounded-lg border border-[#1e2230]/40">
-                  <span className="text-[9px] text-neutral-500 uppercase block font-bold">Conversas (Leads)</span>
-                  <span className="text-xl font-bold text-white block mt-1">{gestores?.anderson?.conversas.toLocaleString('pt-BR')}</span>
+                  <span className="text-[9px] text-neutral-500 uppercase block font-bold">Leads Gerados</span>
+                  <span className="text-xl font-bold text-white block mt-1">
+                    {gestores?.anderson?.conversas.toLocaleString('pt-BR')}
+                  </span>
                 </div>
                 <div className="bg-neutral-950/50 p-4 rounded-lg border border-[#1e2230]/40">
-                  <span className="text-[9px] text-neutral-500 uppercase block font-bold">Custo por Conversa</span>
-                  <span className="text-xl font-bold text-emerald-400 block mt-1">R$ {gestores?.anderson?.custoConversa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                </div>
-                <div className="bg-neutral-950/50 p-4 rounded-lg border border-[#1e2230]/40">
-                  <span className="text-[9px] text-neutral-500 uppercase block font-bold">Cliques / CPC</span>
-                  <span className="text-sm text-neutral-300 block mt-1">{gestores?.anderson?.cliques} cliques</span>
-                  <span className="text-[10px] text-neutral-500 block">CPC: R$ {gestores?.anderson?.cpc}</span>
+                  <span className="text-[9px] text-neutral-500 uppercase block font-bold">Custo por Lead (CPL)</span>
+                  <span className="text-xl font-bold text-emerald-400 block mt-1 font-mono">
+                    R$ {gestores?.anderson?.custoConversa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
                 </div>
               </div>
             </div>
@@ -457,74 +437,31 @@ export default function MarketingCampanhasPage() {
               <div className="absolute top-0 left-0 w-1.5 h-full bg-[#f39c12]" />
               <h2 className="text-lg font-bold text-white font-display mb-1">Fulvio (Atual)</h2>
               <span className="text-[10px] text-neutral-500 font-mono block mb-5">
-                Período: {gestores?.fulvio?.inicio} a {gestores?.fulvio?.fim} ({gestores?.fulvio?.diasAtivos} dias ativos)
+                Período Concorrente ({gestores?.fulvio?.diasAtivos} dias)
               </span>
 
-              <div className="grid grid-cols-2 gap-6 font-mono">
-                <div className="bg-neutral-950/50 p-4 rounded-lg border border-[#1e2230]/40">
-                  <span className="text-[9px] text-neutral-500 uppercase block font-bold">Investimento Total</span>
-                  <span className="text-xl font-bold text-white block mt-1">R$ {gestores?.fulvio?.investimento.toLocaleString('pt-BR')}</span>
+              <div className="grid grid-cols-2 gap-4 font-mono">
+                <div className="bg-neutral-950/50 p-4 rounded-lg border border-[#1e2230]/40 col-span-2">
+                  <span className="text-[9px] text-neutral-500 uppercase block font-bold">Investimento no Período</span>
+                  <span className="text-2xl font-black text-white block mt-1">
+                    R$ {gestores?.fulvio?.investimento.toLocaleString('pt-BR')}
+                  </span>
                 </div>
                 <div className="bg-neutral-950/50 p-4 rounded-lg border border-[#1e2230]/40">
-                  <span className="text-[9px] text-neutral-500 uppercase block font-bold">Conversas (Leads)</span>
-                  <span className="text-xl font-bold text-white block mt-1">{gestores?.fulvio?.conversas.toLocaleString('pt-BR')}</span>
+                  <span className="text-[9px] text-neutral-500 uppercase block font-bold">Leads Gerados</span>
+                  <span className="text-xl font-bold text-white block mt-1">
+                    {gestores?.fulvio?.conversas.toLocaleString('pt-BR')}
+                  </span>
                 </div>
                 <div className="bg-neutral-950/50 p-4 rounded-lg border border-[#1e2230]/40">
-                  <span className="text-[9px] text-neutral-500 uppercase block font-bold">Custo por Conversa</span>
-                  <span className="text-xl font-bold text-emerald-400 block mt-1">R$ {gestores?.fulvio?.custoConversa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                </div>
-                <div className="bg-neutral-950/50 p-4 rounded-lg border border-[#1e2230]/40">
-                  <span className="text-[9px] text-neutral-500 uppercase block font-bold">Cliques / CPC</span>
-                  <span className="text-sm text-neutral-300 block mt-1">{gestores?.fulvio?.cliques} cliques</span>
-                  <span className="text-[10px] text-neutral-500 block">CPC: R$ {gestores?.fulvio?.cpc}</span>
+                  <span className="text-[9px] text-neutral-500 uppercase block font-bold">Custo por Lead (CPL)</span>
+                  <span className="text-xl font-bold text-emerald-400 block mt-1 font-mono">
+                    R$ {gestores?.fulvio?.custoConversa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
                 </div>
               </div>
             </div>
           </div>
-
-          {/* Overlap analysis Section */}
-          {gestores?.overlap && (
-            <div className="bg-[#12141c] border border-[#1e2230] rounded-xl p-6 shadow-xl space-y-4">
-              <div>
-                <h3 className="text-sm font-bold text-white font-display">Análise Comparativa em Período Concorrente</h3>
-                <p className="text-xs text-neutral-400 font-mono mt-1">
-                  Métricas isoladas exclusivamente para os **{gestores.overlap.dias} dias** em que ambos tiveram campanhas rodando simultaneamente.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Anderson stats in overlap */}
-                <div className="bg-neutral-950/30 p-4 rounded-lg border border-[#1e2230]/40 flex justify-between items-center font-mono text-xs">
-                  <div>
-                    <span className="text-[9px] text-neutral-500 font-bold block">ANDERSON (PERÍODO CONCORRENTE)</span>
-                    <span className="text-neutral-300 block mt-1">{gestores.overlap.anderson.conversas} conversas</span>
-                    <span className="text-neutral-400">R$ {gestores.overlap.anderson.investimento.toLocaleString('pt-BR')} investidos</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[9px] text-neutral-500 font-bold block">CUSTO POR LEAD</span>
-                    <span className="text-base font-bold text-[#f39c12] mt-1 block">
-                      R$ {gestores.overlap.anderson.custoConversa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Fulvio stats in overlap */}
-                <div className="bg-neutral-950/30 p-4 rounded-lg border border-[#1e2230]/40 flex justify-between items-center font-mono text-xs">
-                  <div>
-                    <span className="text-[9px] text-neutral-500 font-bold block">FULVIO (PERÍODO CONCORRENTE)</span>
-                    <span className="text-neutral-300 block mt-1">{gestores.overlap.fulvio.conversas} conversas</span>
-                    <span className="text-neutral-400">R$ {gestores.overlap.fulvio.investimento.toLocaleString('pt-BR')} investidos</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[9px] text-neutral-500 font-bold block">CUSTO POR LEAD</span>
-                    <span className="text-base font-bold text-[#f39c12] mt-1 block">
-                      R$ {gestores.overlap.fulvio.custoConversa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       )}
     </div>

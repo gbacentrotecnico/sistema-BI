@@ -6,7 +6,6 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const startDateStr = url.searchParams.get('startDate') || '2026-07-01';
     const endDateStr = url.searchParams.get('endDate') || '2026-07-10';
-    const storeFilter = url.searchParams.get('store') || 'all'; // 'all', 'mecanica', 'ct'
 
     const startDate = new Date(startDateStr);
     const endDate = new Date(endDateStr);
@@ -19,40 +18,25 @@ export async function GET(request: Request) {
     const prevEndDate = new Date(endDate);
     prevEndDate.setMonth(prevEndDate.getMonth() - 1);
 
-    // Buscar todas as integrações
-    const integrations = await prisma.integration.findMany();
-    const ctIntegrationIds = integrations
-      .filter(i => i.nome.toUpperCase().includes('CT') || i.nome.toUpperCase().includes('CENTRO'))
-      .map(i => i.id);
-    const mecIntegrationIds = integrations
-      .filter(i => i.nome.toUpperCase().includes('MEC') || i.nome.toUpperCase().includes('AUTOMOTIVO'))
-      .map(i => i.id);
-
-    // Filtros de query do Prisma
-    const buildWhereClause = (start: Date, end: Date) => {
-      const where: any = {
-        data: {
-          gte: start,
-          lte: end
-        }
-      };
-      if (storeFilter === 'mecanica' && mecIntegrationIds.length > 0) {
-        where.integrationId = { in: mecIntegrationIds };
-      } else if (storeFilter === 'ct' && ctIntegrationIds.length > 0) {
-        where.integrationId = { in: ctIntegrationIds };
-      }
-      return where;
-    };
-
-    // 1. Buscar registros do período atual
+    // 1. Buscar todos os registros do período atual (Unificados - sem separar por BM no Master)
     const campaigns = await prisma.performanceCampanha.findMany({
-      where: buildWhereClause(startDate, endDate),
+      where: {
+        data: {
+          gte: startDate,
+          lte: endDate
+        }
+      },
       orderBy: { data: 'asc' }
     });
 
-    // 2. Buscar registros do período do mês anterior
+    // 2. Buscar todos os registros do período do mês anterior (Unificados)
     const prevCampaigns = await prisma.performanceCampanha.findMany({
-      where: buildWhereClause(prevStartDate, prevEndDate)
+      where: {
+        data: {
+          gte: prevStartDate,
+          lte: prevEndDate
+        }
+      }
     });
 
     // 3. Agregados Período Atual
@@ -167,77 +151,66 @@ export async function GET(request: Request) {
       };
     }).sort((a, b) => b.investimento - a.investimento);
 
-    // 7. CÁLCULO DE COMPARAÇÃO DE GESTORES (Anderson vs. Fulvio)
-    // Busca todo o histórico dos dois
+    // 7. CÁLCULO DE COMPARAÇÃO DE GESTORES (Apenas período concorrente / overlap)
+    const integrations = await prisma.integration.findMany();
+    const ctIntegrationIds = integrations
+      .filter(i => i.nome.toUpperCase().includes('CT') || i.nome.toUpperCase().includes('CENTRO'))
+      .map(i => i.id);
+    const mecIntegrationIds = integrations
+      .filter(i => i.nome.toUpperCase().includes('MEC') || i.nome.toUpperCase().includes('AUTOMOTIVO'))
+      .map(i => i.id);
+
     const allCampaigns = await prisma.performanceCampanha.findMany();
 
-    const calculateManagerStats = (filterIds: number[]) => {
-      const filtered = allCampaigns.filter(c => filterIds.includes(c.integrationId || 0));
-      if (filtered.length === 0) return null;
-
-      let conv = 0, cli = 0, spent = 0, imp = 0, alc = 0;
-      const dates = filtered.map(c => new Date(c.data).getTime());
-      const minDate = new Date(Math.min(...dates));
-      const maxDate = new Date(Math.max(...dates));
-
-      filtered.forEach(c => {
-        conv += c.conversoesMensagens || 0;
-        cli += c.cliquesLink || 0;
-        spent += c.valorGasto || 0;
-        imp += c.impressoes || 0;
-        alc += c.alcance || 0;
-      });
-
-      const uniqueDays = new Set(filtered.map(c => new Date(c.data).toDateString())).size;
-
-      return {
-        conversas: conv,
-        cliques: cli,
-        investimento: Number(spent.toFixed(2)),
-        custoConversa: conv > 0 ? Number((spent / conv).toFixed(2)) : 0,
-        cpc: cli > 0 ? Number((spent / cli).toFixed(2)) : 0,
-        diasAtivos: uniqueDays,
-        inicio: minDate.toLocaleDateString('pt-BR'),
-        fim: maxDate.toLocaleDateString('pt-BR')
-      };
-    };
-
-    const andersonStats = calculateManagerStats(ctIntegrationIds);
-    const fulvioStats = calculateManagerStats(mecIntegrationIds);
-
-    // Período Concorrente (Overlap)
+    // Encontrar dias do Anderson e Fulvio
     const andersonDays = new Set(allCampaigns.filter(c => ctIntegrationIds.includes(c.integrationId || 0)).map(c => new Date(c.data).toDateString()));
     const fulvioDays = new Set(allCampaigns.filter(c => mecIntegrationIds.includes(c.integrationId || 0)).map(c => new Date(c.data).toDateString()));
+    
+    // Dias em que ambos rodaram juntos
     const overlapDays = Array.from(andersonDays).filter(d => fulvioDays.has(d));
 
-    let overlapAndersonConv = 0, overlapAndersonSpent = 0;
-    let overlapFulvioConv = 0, overlapFulvioSpent = 0;
+    let andersonOverlapConv = 0, andersonOverlapSpent = 0, andersonOverlapCliques = 0;
+    let fulvioOverlapConv = 0, fulvioOverlapSpent = 0, fulvioOverlapCliques = 0;
 
     allCampaigns.forEach(c => {
       const dateStr = new Date(c.data).toDateString();
       if (overlapDays.includes(dateStr)) {
         if (ctIntegrationIds.includes(c.integrationId || 0)) {
-          overlapAndersonConv += c.conversoesMensagens || 0;
-          overlapAndersonSpent += c.valorGasto || 0;
+          andersonOverlapConv += c.conversoesMensagens || 0;
+          andersonOverlapSpent += c.valorGasto || 0;
+          andersonOverlapCliques += c.cliquesLink || 0;
         } else if (mecIntegrationIds.includes(c.integrationId || 0)) {
-          overlapFulvioConv += c.conversoesMensagens || 0;
-          overlapFulvioSpent += c.valorGasto || 0;
+          fulvioOverlapConv += c.conversoesMensagens || 0;
+          fulvioOverlapSpent += c.valorGasto || 0;
+          fulvioOverlapCliques += c.cliquesLink || 0;
         }
       }
     });
 
-    const overlapStats = overlapDays.length > 0 ? {
-      dias: overlapDays.length,
-      anderson: {
-        conversas: overlapAndersonConv,
-        investimento: Number(overlapAndersonSpent.toFixed(2)),
-        custoConversa: overlapAndersonConv > 0 ? Number((overlapAndersonSpent / overlapAndersonConv).toFixed(2)) : 0
-      },
-      fulvio: {
-        conversas: overlapFulvioConv,
-        investimento: Number(overlapFulvioSpent.toFixed(2)),
-        custoConversa: overlapFulvioConv > 0 ? Number((overlapFulvioSpent / overlapFulvioConv).toFixed(2)) : 0
-      }
+    const overlapDates = overlapDays.map(d => new Date(d).getTime());
+    const minOverlap = overlapDates.length > 0 ? new Date(Math.min(...overlapDates)).toLocaleDateString('pt-BR') : '';
+    const maxOverlap = overlapDates.length > 0 ? new Date(Math.max(...overlapDates)).toLocaleDateString('pt-BR') : '';
+
+    const andersonStats = overlapDays.length > 0 ? {
+      conversas: andersonOverlapConv,
+      cliques: andersonOverlapCliques,
+      investimento: Number(andersonOverlapSpent.toFixed(2)),
+      custoConversa: andersonOverlapConv > 0 ? Number((andersonOverlapSpent / andersonOverlapConv).toFixed(2)) : 0,
+      cpc: andersonOverlapCliques > 0 ? Number((andersonOverlapSpent / andersonOverlapCliques).toFixed(2)) : 0,
+      diasAtivos: overlapDays.length,
+      inicio: minOverlap,
+      fim: maxOverlap
+    } : null;
+
+    const fulvioStats = overlapDays.length > 0 ? {
+      conversas: fulvioOverlapConv,
+      cliques: fulvioOverlapCliques,
+      investimento: Number(fulvioOverlapSpent.toFixed(2)),
+      custoConversa: fulvioOverlapConv > 0 ? Number((fulvioOverlapSpent / fulvioOverlapConv).toFixed(2)) : 0,
+      cpc: fulvioOverlapCliques > 0 ? Number((fulvioOverlapSpent / fulvioOverlapCliques).toFixed(2)) : 0,
+      diasAtivos: overlapDays.length,
+      inicio: minOverlap,
+      fim: maxOverlap
     } : null;
 
     return NextResponse.json({
@@ -269,7 +242,7 @@ export async function GET(request: Request) {
       gestores: {
         anderson: andersonStats,
         fulvio: fulvioStats,
-        overlap: overlapStats
+        overlap: overlapDays.length > 0 ? { dias: overlapDays.length } : null
       }
     });
 

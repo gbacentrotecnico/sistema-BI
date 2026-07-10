@@ -509,6 +509,10 @@ model PerformanceCampanha {
   videoWatches95              Int?
   conversoesMensagens         Int?
   custoPorConversaoMensagem   Float?
+  integrationId               Int?
   createdAt                   DateTime @default(now())
+
+  @@unique([data, adSetName, campaignName, integrationId])
 }
+
 

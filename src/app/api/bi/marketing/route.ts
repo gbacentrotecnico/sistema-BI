@@ -19,42 +19,41 @@ export async function GET(request: Request) {
     const prevEndDate = new Date(endDate);
     prevEndDate.setMonth(prevEndDate.getMonth() - 1);
 
+    // Buscar integrações para filtrar por Loja de forma nativa e SSOT
+    const integrations = await prisma.integration.findMany();
+    const ctIntegrationIds = integrations
+      .filter(i => i.nome.toUpperCase().includes('CT') || i.nome.toUpperCase().includes('CENTRO'))
+      .map(i => i.id);
+    const mecIntegrationIds = integrations
+      .filter(i => i.nome.toUpperCase().includes('MEC') || i.nome.toUpperCase().includes('AUTOMOTIVO'))
+      .map(i => i.id);
+
+    // Filtros de query do Prisma
+    const buildWhereClause = (start: Date, end: Date) => {
+      const where: any = {
+        data: {
+          gte: start,
+          lte: end
+        }
+      };
+      if (storeFilter === 'mecanica' && mecIntegrationIds.length > 0) {
+        where.integrationId = { in: mecIntegrationIds };
+      } else if (storeFilter === 'ct' && ctIntegrationIds.length > 0) {
+        where.integrationId = { in: ctIntegrationIds };
+      }
+      return where;
+    };
+
     // 1. Buscar registros do período atual
     const campaigns = await prisma.performanceCampanha.findMany({
-      where: {
-        data: {
-          gte: startDate,
-          lte: endDate
-        }
-      }
+      where: buildWhereClause(startDate, endDate),
+      orderBy: { data: 'asc' }
     });
 
     // 2. Buscar registros do período do mês anterior
     const prevCampaigns = await prisma.performanceCampanha.findMany({
-      where: {
-        data: {
-          gte: prevStartDate,
-          lte: prevEndDate
-        }
-      }
+      where: buildWhereClause(prevStartDate, prevEndDate)
     });
-
-    // Função para aplicar filtro de loja
-    const filterByStore = (list: any[]) => {
-      return list.filter(c => {
-        const name = (c.campaignName + ' ' + c.adSetName).toUpperCase();
-        if (storeFilter === 'mecanica') {
-          return name.includes('MEC') || name.includes('MECANICA') || name.includes('AUTOMOTIVO') || name.includes('FUT') || name.includes('PNEU');
-        }
-        if (storeFilter === 'ct') {
-          return name.includes('CT') || name.includes('CENTRO') || name.includes('TECNICO') || name.includes('TECNICO');
-        }
-        return true;
-      });
-    };
-
-    const currentFiltered = filterByStore(campaigns);
-    const prevFiltered = filterByStore(prevCampaigns);
 
     // 3. Agregados Período Atual
     let totalConversas = 0;
@@ -63,7 +62,7 @@ export async function GET(request: Request) {
     let totalImpressoes = 0;
     let totalInvestimento = 0;
 
-    currentFiltered.forEach(c => {
+    campaigns.forEach(c => {
       totalConversas += c.conversoesMensagens || 0;
       totalCliques += c.cliquesLink || 0;
       totalAlcance += c.alcance || 0;
@@ -81,7 +80,7 @@ export async function GET(request: Request) {
     let prevTotalImpressoes = 0;
     let prevTotalInvestimento = 0;
 
-    prevFiltered.forEach(c => {
+    prevCampaigns.forEach(c => {
       prevTotalConversas += c.conversoesMensagens || 0;
       prevTotalCliques += c.cliquesLink || 0;
       prevTotalAlcance += c.alcance || 0;
@@ -107,7 +106,7 @@ export async function GET(request: Request) {
       current.setDate(current.getDate() + 1);
     }
 
-    currentFiltered.forEach(c => {
+    campaigns.forEach(c => {
       const label = new Date(c.data).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' });
       const currentVal = dailyMap.get(label) || { dataStr: label, conversas: 0, cliques: 0, investimento: 0, impressoes: 0 };
       currentVal.conversas += c.conversoesMensagens || 0;
@@ -129,7 +128,7 @@ export async function GET(request: Request) {
       frequenciaCount: number;
     }>();
 
-    currentFiltered.forEach(c => {
+    campaigns.forEach(c => {
       const key = c.adSetName || 'Outros';
       const existing = creativeMap.get(key) || {
         criativo: key,

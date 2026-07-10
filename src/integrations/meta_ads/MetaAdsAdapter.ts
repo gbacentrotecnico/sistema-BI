@@ -50,15 +50,22 @@ export class MetaAdsAdapter implements IIntegrationAdapter {
       return parsed === null ? defaultVal : parsed;
     };
 
-    // Mapeamento dos campos do Meta Ads CSV/JSON
     const dayVal = payload['Day'] || payload['day'] || payload['data'];
     const data = dayVal ? new Date(dayVal) : new Date();
+    const adSetName = payload['Ad Set Name'] || payload['adSetName'] || 'N/A';
+    const campaignName = payload['Campaign Name'] || payload['campaignName'] || 'N/A';
+    const integrationId = rawEvent.integration_id;
 
-    await prisma.performanceCampanha.create({
-      data: {
-        data,
-        adSetName: payload['Ad Set Name'] || payload['adSetName'] || 'N/A',
-        campaignName: payload['Campaign Name'] || payload['campaignName'] || 'N/A',
+    await prisma.performanceCampanha.upsert({
+      where: {
+        data_adSetName_campaignName_integrationId: {
+          data,
+          adSetName,
+          campaignName,
+          integrationId
+        }
+      },
+      update: {
         alcance: parseIntRequired(payload['Reach'] || payload['alcance']),
         impressoes: parseIntRequired(payload['Impressions'] || payload['impressoes']),
         frequencia: parseBRRequired(payload['Frequency'] || payload['frequencia']),
@@ -75,6 +82,28 @@ export class MetaAdsAdapter implements IIntegrationAdapter {
         videoWatches95: parseIntSafe(payload['Video Watches at 95%'] || payload['videoWatches95']),
         conversoesMensagens: parseIntSafe(payload['Messaging Conversations Started'] || payload['conversoesMensagens']),
         custoPorConversaoMensagem: parseBR(payload['Cost per Messaging Conversations Started'] || payload['custoPorConversaoMensagem'])
+      },
+      create: {
+        data,
+        adSetName,
+        campaignName,
+        alcance: parseIntRequired(payload['Reach'] || payload['alcance']),
+        impressoes: parseIntRequired(payload['Impressions'] || payload['impressoes']),
+        frequencia: parseBRRequired(payload['Frequency'] || payload['frequencia']),
+        resultados: parseBR(payload['Results'] || payload['resultados']),
+        custoPorResultado: parseBR(payload['Cost per Result'] || payload['custoPorResultado']),
+        valorGasto: parseBRRequired(payload['Amount Spent'] || payload['valorGasto']),
+        cpm: parseBRRequired(payload['CPM (Cost per 1,000 Impressions)'] || payload['cpm']),
+        cliquesLink: parseIntRequired(payload['Link Clicks'] || payload['cliquesLink']),
+        cpc: parseBR(payload['CPC (Cost per Link Click)'] || payload['cpc']),
+        ctr: parseBRRequired(payload['CTR (Link Click-Through Rate)'] || payload['ctr']),
+        videoWatches25: parseIntSafe(payload['Video Watches at 25%'] || payload['videoWatches25']),
+        videoWatches50: parseIntSafe(payload['Video Watches at 50%'] || payload['videoWatches50']),
+        videoWatches75: parseIntSafe(payload['Video Watches at 75%'] || payload['videoWatches75']),
+        videoWatches95: parseIntSafe(payload['Video Watches at 95%'] || payload['videoWatches95']),
+        conversoesMensagens: parseIntSafe(payload['Messaging Conversations Started'] || payload['conversoesMensagens']),
+        custoPorConversaoMensagem: parseBR(payload['Cost per Messaging Conversations Started'] || payload['custoPorConversaoMensagem']),
+        integrationId
       }
     });
   }

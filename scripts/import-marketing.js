@@ -71,8 +71,9 @@ async function importFile(filePath, integrationId) {
     if (!dayVal) continue;
 
     const data = new Date(dayVal);
-    const adSetName = row['Ad Set Name'] || 'N/A';
-    const campaignName = row['Campaign Name'] || 'N/A';
+    // Ad Name representa o criativo (adSetName), Ad Set Name representa o grupo/campanha (campaignName)
+    const adSetName = row['Ad Name'] || row['Ad Set Name'] || 'N/A';
+    const campaignName = row['Ad Set Name'] || 'N/A';
 
     // Obter campos numéricos
     const alcance = parseIntRequired(row['Reach'] || row['alcance']);

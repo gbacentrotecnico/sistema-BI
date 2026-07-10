@@ -147,6 +147,7 @@ model Loja {
   
   inboxes       Inbox[]
   oportunidades Oportunidade[]
+  vendas_diarias VendaDiariaColaborador[]
   
   schema_version       Int            @default(1)
   aggregate_version    Int            @default(1)
@@ -177,9 +178,11 @@ model Tele {
   id                     Int            @id @default(autoincrement())
   nome                   String
   tipo                   String         
+  aliases                String[]       @default([])
   clientes_captados      Cliente[]      @relation("TeleOriginal")
   oportunidades_fechadas Oportunidade[] @relation("TeleConversao")
   conversas_responsaveis Conversa[]     @relation("TeleResponsavel")
+  vendas_diarias         VendaDiariaColaborador[]
   
   schema_version         Int            @default(1)
   aggregate_version      Int            @default(1)
@@ -371,6 +374,33 @@ model Oportunidade {
 
   @@index([status])
   @@index([loja_id])
+}
+
+model VendaDiariaColaborador {
+  id              Int      @id @default(autoincrement())
+  data_venda      DateTime
+  
+  loja_id         Int
+  loja            Loja     @relation(fields: [loja_id], references: [id])
+  
+  colaborador_id  Int
+  colaborador     Tele     @relation(fields: [colaborador_id], references: [id])
+  
+  origem_planilha String
+  
+  qtd_vendas      Int      @default(0)
+  valor_servicos  Decimal  @default(0) @db.Decimal(10,2)
+  valor_produtos  Decimal  @default(0) @db.Decimal(10,2)
+  total_liquido   Decimal  @default(0) @db.Decimal(10,2)
+  lucro           Decimal  @default(0) @db.Decimal(10,2)
+  desconto        Decimal  @default(0) @db.Decimal(10,2)
+  
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+  
+  @@index([data_venda])
+  @@index([loja_id])
+  @@index([colaborador_id])
 }
 
 // ==========================================

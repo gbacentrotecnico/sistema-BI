@@ -39,7 +39,39 @@ interface TableRecord {
   investimento: number;
 }
 
+interface GestorStats {
+  conversas: number;
+  cliques: number;
+  investimento: number;
+  custoConversa: number;
+  cpc: number;
+  diasAtivos: number;
+  inicio: string;
+  fim: string;
+}
+
+interface OverlapStats {
+  dias: number;
+  anderson: {
+    conversas: number;
+    investimento: number;
+    custoConversa: number;
+  };
+  fulvio: {
+    conversas: number;
+    investimento: number;
+    custoConversa: number;
+  };
+}
+
+interface GestoresPayload {
+  anderson: GestorStats | null;
+  fulvio: GestorStats | null;
+  overlap: OverlapStats | null;
+}
+
 export default function MarketingCampanhasPage() {
+  const [activeMenuTab, setActiveMenuTab] = useState<'master' | 'gestores'>('master');
   const [startDate, setStartDate] = useState('2026-07-01');
   const [endDate, setEndDate] = useState('2026-07-10');
   const [storeFilter, setStoreFilter] = useState<'all' | 'mecanica' | 'ct'>('mecanica');
@@ -48,6 +80,7 @@ export default function MarketingCampanhasPage() {
   const [summary, setSummary] = useState<SummaryObj | null>(null);
   const [dailyData, setDailyData] = useState<DailyRecord[]>([]);
   const [tableData, setTableData] = useState<TableRecord[]>([]);
+  const [gestores, setGestores] = useState<GestoresPayload | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -58,6 +91,7 @@ export default function MarketingCampanhasPage() {
         setSummary(data.summary);
         setDailyData(data.dailyData);
         setTableData(data.tableData);
+        setGestores(data.gestores || null);
       }
     } catch (err) {
       console.error(err);
@@ -70,7 +104,6 @@ export default function MarketingCampanhasPage() {
     loadData();
   }, [loadData]);
 
-  // Helper to render variance badge
   const renderBadge = (value: number, invertSemantics = false) => {
     if (value === 0) {
       return (
@@ -99,60 +132,74 @@ export default function MarketingCampanhasPage() {
 
   return (
     <div className="p-8 sm:p-10 bg-[#0c0d12] text-neutral-200 min-h-screen font-sans space-y-8 select-none">
-      {/* Header */}
+      {/* 1. Header with Tab Menu */}
       <header className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 border-b border-[#1e2230]/45 pb-6">
-        <div className="flex flex-col">
+        <div className="flex flex-col gap-2">
           <div className="flex items-baseline gap-3">
             <h1 className="text-3xl font-extrabold text-white font-display tracking-tight">
-              Meta Ads - GBA {storeFilter === 'mecanica' ? 'Mecânica' : storeFilter === 'ct' ? 'Centro Técnico' : 'Grupo'}
+              Meta Ads - GBA Mecânica
             </h1>
-            <span className="text-xs text-neutral-500 font-mono">Fulvio</span>
           </div>
-        </div>
-
-        {/* Filters */}
-        <div className="flex flex-wrap items-center gap-4 bg-neutral-950/60 p-2.5 rounded-xl border border-[#1e2230]">
-          <div className="flex items-center gap-2">
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="bg-[#12141c] border border-[#1e2230] rounded px-3 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-abucci-gold"
-            />
-            <span className="text-neutral-600 text-xs font-mono">a</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="bg-[#12141c] border border-[#1e2230] rounded px-3 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-abucci-gold"
-            />
-          </div>
-
-          <div className="flex bg-[#12141c] p-1 rounded-lg border border-[#1e2230] gap-1">
+          <div className="flex bg-[#12141c] p-1 rounded-lg border border-[#1e2230] gap-1 self-start">
             <button
-              onClick={() => setStoreFilter('mecanica')}
-              className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${storeFilter === 'mecanica' ? 'bg-[#f39c12] text-neutral-950 shadow-md' : 'text-neutral-400 hover:text-neutral-200'}`}
+              onClick={() => setActiveMenuTab('master')}
+              className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeMenuTab === 'master' ? 'bg-[#f39c12] text-neutral-950 shadow-md' : 'text-neutral-400 hover:text-neutral-200'}`}
             >
-              Mecânica
+              📊 Relatório Master
             </button>
             <button
-              onClick={() => setStoreFilter('ct')}
-              className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${storeFilter === 'ct' ? 'bg-[#f39c12] text-neutral-950 shadow-md' : 'text-neutral-400 hover:text-neutral-200'}`}
+              onClick={() => setActiveMenuTab('gestores')}
+              className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeMenuTab === 'gestores' ? 'bg-[#f39c12] text-neutral-950 shadow-md' : 'text-neutral-400 hover:text-neutral-200'}`}
             >
-              Centro Técnico
+              ⚖️ Análise dos Gestores
             </button>
           </div>
         </div>
+
+        {/* Master Report Filters */}
+        {activeMenuTab === 'master' && (
+          <div className="flex flex-wrap items-center gap-4 bg-neutral-950/60 p-2.5 rounded-xl border border-[#1e2230]">
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="bg-[#12141c] border border-[#1e2230] rounded px-3 py-1.5 text-xs text-white font-mono focus:outline-none"
+              />
+              <span className="text-neutral-600 text-xs font-mono">a</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="bg-[#12141c] border border-[#1e2230] rounded px-3 py-1.5 text-xs text-white font-mono focus:outline-none"
+              />
+            </div>
+
+            <div className="flex bg-[#12141c] p-1 rounded-lg border border-[#1e2230] gap-1">
+              <button
+                onClick={() => setStoreFilter('mecanica')}
+                className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${storeFilter === 'mecanica' ? 'bg-[#f39c12] text-neutral-950 shadow-md' : 'text-neutral-400 hover:text-neutral-200'}`}
+              >
+                Mecânica (BM Fulvio)
+              </button>
+              <button
+                onClick={() => setStoreFilter('ct')}
+                className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${storeFilter === 'ct' ? 'bg-[#f39c12] text-neutral-950 shadow-md' : 'text-neutral-400 hover:text-neutral-200'}`}
+              >
+                Centro Técnico (BM Anderson)
+              </button>
+            </div>
+          </div>
+        )}
       </header>
 
       {loading ? (
-        <div className="text-center py-32 text-xs text-neutral-500 font-mono">Calculando métricas MoM comparativas...</div>
-      ) : (
+        <div className="text-center py-32 text-xs text-neutral-500 font-mono">Calculando métricas...</div>
+      ) : activeMenuTab === 'master' ? (
         <div className="space-y-8 animate-fade-in">
-          {/* KPI Cards Grid */}
+          {/* 2. KPI Cards Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-            {/* Conversas */}
-            <div className="bg-[#12141c] border border-[#1e2230] rounded-xl p-4 shadow-lg flex flex-col justify-between hover:border-[#f39c12]/30 transition-all duration-300">
+            <div className="bg-[#12141c] border border-[#1e2230] rounded-xl p-4 shadow-lg flex flex-col justify-between">
               <span className="text-[10px] uppercase font-bold text-neutral-500 tracking-wider font-mono">Conversas Iniciadas</span>
               <div className="mt-2.5">
                 <span className="text-2xl font-black text-white font-mono block">{summary?.totalConversas}</span>
@@ -160,8 +207,7 @@ export default function MarketingCampanhasPage() {
               </div>
             </div>
 
-            {/* Custo/Conversa */}
-            <div className="bg-[#12141c] border border-[#1e2230] rounded-xl p-4 shadow-lg flex flex-col justify-between hover:border-[#f39c12]/30 transition-all duration-300">
+            <div className="bg-[#12141c] border border-[#1e2230] rounded-xl p-4 shadow-lg flex flex-col justify-between">
               <span className="text-[10px] uppercase font-bold text-neutral-500 tracking-wider font-mono">Custo Médio/Conversa</span>
               <div className="mt-2.5">
                 <span className="text-2xl font-black text-white font-mono block">
@@ -171,8 +217,7 @@ export default function MarketingCampanhasPage() {
               </div>
             </div>
 
-            {/* Cliques */}
-            <div className="bg-[#12141c] border border-[#1e2230] rounded-xl p-4 shadow-lg flex flex-col justify-between hover:border-[#f39c12]/30 transition-all duration-300">
+            <div className="bg-[#12141c] border border-[#1e2230] rounded-xl p-4 shadow-lg flex flex-col justify-between">
               <span className="text-[10px] uppercase font-bold text-neutral-500 tracking-wider font-mono">Cliques</span>
               <div className="mt-2.5">
                 <span className="text-2xl font-black text-white font-mono block">{summary?.totalCliques.toLocaleString('pt-BR')}</span>
@@ -180,8 +225,7 @@ export default function MarketingCampanhasPage() {
               </div>
             </div>
 
-            {/* CPC */}
-            <div className="bg-[#12141c] border border-[#1e2230] rounded-xl p-4 shadow-lg flex flex-col justify-between hover:border-[#f39c12]/30 transition-all duration-300">
+            <div className="bg-[#12141c] border border-[#1e2230] rounded-xl p-4 shadow-lg flex flex-col justify-between">
               <span className="text-[10px] uppercase font-bold text-neutral-500 tracking-wider font-mono">Custo por Clique</span>
               <div className="mt-2.5">
                 <span className="text-2xl font-black text-white font-mono block">
@@ -191,8 +235,7 @@ export default function MarketingCampanhasPage() {
               </div>
             </div>
 
-            {/* Alcance */}
-            <div className="bg-[#12141c] border border-[#1e2230] rounded-xl p-4 shadow-lg flex flex-col justify-between hover:border-[#f39c12]/30 transition-all duration-300">
+            <div className="bg-[#12141c] border border-[#1e2230] rounded-xl p-4 shadow-lg flex flex-col justify-between">
               <span className="text-[10px] uppercase font-bold text-neutral-500 tracking-wider font-mono">Alcance</span>
               <div className="mt-2.5">
                 <span className="text-2xl font-black text-white font-mono block">{summary?.totalAlcance.toLocaleString('pt-BR')}</span>
@@ -200,8 +243,7 @@ export default function MarketingCampanhasPage() {
               </div>
             </div>
 
-            {/* Impressões */}
-            <div className="bg-[#12141c] border border-[#1e2230] rounded-xl p-4 shadow-lg flex flex-col justify-between hover:border-[#f39c12]/30 transition-all duration-300">
+            <div className="bg-[#12141c] border border-[#1e2230] rounded-xl p-4 shadow-lg flex flex-col justify-between">
               <span className="text-[10px] uppercase font-bold text-neutral-500 tracking-wider font-mono">Impressões</span>
               <div className="mt-2.5">
                 <span className="text-2xl font-black text-white font-mono block">{summary?.totalImpressoes.toLocaleString('pt-BR')}</span>
@@ -209,8 +251,7 @@ export default function MarketingCampanhasPage() {
               </div>
             </div>
 
-            {/* Investimento */}
-            <div className="bg-[#12141c] border border-[#1e2230] rounded-xl p-4 shadow-lg flex flex-col justify-between hover:border-[#f39c12]/30 transition-all duration-300">
+            <div className="bg-[#12141c] border border-[#1e2230] rounded-xl p-4 shadow-lg flex flex-col justify-between">
               <span className="text-[10px] uppercase font-bold text-neutral-500 tracking-wider font-mono">Investimento Total</span>
               <div className="mt-2.5">
                 <span className="text-2xl font-black text-abucci-gold font-mono block">
@@ -223,14 +264,11 @@ export default function MarketingCampanhasPage() {
 
           {/* Charts Row */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Conversas e Cliques */}
             <div className="bg-[#12141c] border border-[#1e2230] rounded-xl p-6 shadow-xl space-y-4">
               <h2 className="text-sm font-bold text-white font-display">Conversas Iniciadas e Cliques no Link por Dia</h2>
-              
               <div className="h-64 w-full relative flex items-end justify-between pt-8 border-b border-[#1e2230] pb-2">
                 {dailyData.map((d, idx) => {
                   const barHeight = (d.conversas / maxConversas) * 160 || 5;
-
                   return (
                     <div key={idx} className="flex-1 flex flex-col items-center group relative h-full justify-end">
                       <div className="absolute bottom-full mb-2 bg-neutral-950 border border-[#1e2230] px-3 py-1.5 rounded-lg text-[10px] font-mono opacity-0 group-hover:opacity-100 transition-opacity z-20 pointer-events-none text-left min-w-[120px] shadow-2xl">
@@ -238,7 +276,6 @@ export default function MarketingCampanhasPage() {
                         <span className="text-[#f39c12] block">Conversas: {d.conversas}</span>
                         <span className="text-rose-400 block">Cliques: {d.cliques}</span>
                       </div>
-
                       <div
                         className="w-8 bg-[#f39c12]/20 border border-[#f39c12]/40 rounded-t-sm transition-all duration-300 relative group-hover:bg-[#f39c12]/35"
                         style={{ height: `${barHeight}px` }}
@@ -249,12 +286,10 @@ export default function MarketingCampanhasPage() {
                           </span>
                         )}
                       </div>
-
                       <span className="text-[10px] text-neutral-500 font-mono mt-2 block">{d.dataStr.split('/')[0]}</span>
                     </div>
                   );
                 })}
-
                 <svg className="absolute inset-x-0 bottom-6 h-56 w-full pointer-events-none overflow-visible">
                   <path
                     d={dailyData.map((d, idx) => {
@@ -266,8 +301,6 @@ export default function MarketingCampanhasPage() {
                     fill="none"
                     stroke="#f87171"
                     strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
                   />
                   {dailyData.map((d, idx) => {
                     const colWidth = 100 / dailyData.length;
@@ -286,27 +319,13 @@ export default function MarketingCampanhasPage() {
                   })}
                 </svg>
               </div>
-
-              <div className="flex gap-4 text-[10px] font-mono font-semibold justify-center pt-2">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 bg-[#f39c12]/20 border border-[#f39c12]/40 rounded-sm" />
-                  <span className="text-neutral-400">Conversas Iniciadas</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-3.5 h-0.5 bg-[#f87171] inline-block" />
-                  <span className="text-neutral-400">Cliques no Link</span>
-                </div>
-              </div>
             </div>
 
-            {/* Investimento x Impressões */}
             <div className="bg-[#12141c] border border-[#1e2230] rounded-xl p-6 shadow-xl space-y-4">
               <h2 className="text-sm font-bold text-white font-display">Investimento x Impressões</h2>
-              
               <div className="h-64 w-full relative flex items-end justify-between pt-8 border-b border-[#1e2230] pb-2">
                 {dailyData.map((d, idx) => {
                   const barHeight = (d.investimento / maxInvestimento) * 160 || 5;
-
                   return (
                     <div key={idx} className="flex-1 flex flex-col items-center group relative h-full justify-end">
                       <div className="absolute bottom-full mb-2 bg-neutral-950 border border-[#1e2230] px-3 py-1.5 rounded-lg text-[10px] font-mono opacity-0 group-hover:opacity-100 transition-opacity z-20 pointer-events-none text-left min-w-[120px] shadow-2xl">
@@ -314,7 +333,6 @@ export default function MarketingCampanhasPage() {
                         <span className="text-emerald-400 block">Investimento: R$ {d.investimento.toFixed(2)}</span>
                         <span className="text-blue-400 block">Impressões: {d.impressoes.toLocaleString()}</span>
                       </div>
-
                       <div
                         className="w-8 bg-rose-950/40 border border-rose-800/40 rounded-t-sm transition-all duration-300 relative group-hover:bg-rose-900/50"
                         style={{ height: `${barHeight}px` }}
@@ -325,12 +343,10 @@ export default function MarketingCampanhasPage() {
                           </span>
                         )}
                       </div>
-
                       <span className="text-[10px] text-neutral-500 font-mono mt-2 block">{d.dataStr.split('/')[0]}</span>
                     </div>
                   );
                 })}
-
                 <svg className="absolute inset-x-0 bottom-6 h-56 w-full pointer-events-none overflow-visible">
                   <path
                     d={dailyData.map((d, idx) => {
@@ -342,8 +358,6 @@ export default function MarketingCampanhasPage() {
                     fill="none"
                     stroke="#4ade80"
                     strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
                   />
                   {dailyData.map((d, idx) => {
                     const colWidth = 100 / dailyData.length;
@@ -362,21 +376,10 @@ export default function MarketingCampanhasPage() {
                   })}
                 </svg>
               </div>
-
-              <div className="flex gap-4 text-[10px] font-mono font-semibold justify-center pt-2">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 bg-rose-900/40 border border-rose-800/40 rounded-sm" />
-                  <span className="text-neutral-400">Investimento</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-3.5 h-0.5 bg-[#4ade80] inline-block" />
-                  <span className="text-neutral-400">Impressões</span>
-                </div>
-              </div>
             </div>
           </div>
 
-          {/* Table */}
+          {/* Table Section */}
           <div className="bg-[#12141c] border border-[#1e2230] rounded-xl shadow-xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
@@ -415,6 +418,113 @@ export default function MarketingCampanhasPage() {
               </table>
             </div>
           </div>
+        </div>
+      ) : (
+        <div className="space-y-8 animate-fade-in max-w-5xl mx-auto">
+          {/* Gestores Comparison Tab Content */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Column 1: Anderson */}
+            <div className="bg-[#12141c] border border-[#1e2230] rounded-xl p-6 shadow-xl relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-1.5 h-full bg-[#f39c12]/40" />
+              <h2 className="text-lg font-bold text-white font-display mb-1">Anderson (Histórico)</h2>
+              <span className="text-[10px] text-neutral-500 font-mono block mb-5">
+                Período: {gestores?.anderson?.inicio} a {gestores?.anderson?.fim} ({gestores?.anderson?.diasAtivos} dias ativos)
+              </span>
+
+              <div className="grid grid-cols-2 gap-6 font-mono">
+                <div className="bg-neutral-950/50 p-4 rounded-lg border border-[#1e2230]/40">
+                  <span className="text-[9px] text-neutral-500 uppercase block font-bold">Investimento Total</span>
+                  <span className="text-xl font-bold text-white block mt-1">R$ {gestores?.anderson?.investimento.toLocaleString('pt-BR')}</span>
+                </div>
+                <div className="bg-neutral-950/50 p-4 rounded-lg border border-[#1e2230]/40">
+                  <span className="text-[9px] text-neutral-500 uppercase block font-bold">Conversas (Leads)</span>
+                  <span className="text-xl font-bold text-white block mt-1">{gestores?.anderson?.conversas.toLocaleString('pt-BR')}</span>
+                </div>
+                <div className="bg-neutral-950/50 p-4 rounded-lg border border-[#1e2230]/40">
+                  <span className="text-[9px] text-neutral-500 uppercase block font-bold">Custo por Conversa</span>
+                  <span className="text-xl font-bold text-emerald-400 block mt-1">R$ {gestores?.anderson?.custoConversa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="bg-neutral-950/50 p-4 rounded-lg border border-[#1e2230]/40">
+                  <span className="text-[9px] text-neutral-500 uppercase block font-bold">Cliques / CPC</span>
+                  <span className="text-sm text-neutral-300 block mt-1">{gestores?.anderson?.cliques} cliques</span>
+                  <span className="text-[10px] text-neutral-500 block">CPC: R$ {gestores?.anderson?.cpc}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Column 2: Fulvio */}
+            <div className="bg-[#12141c] border border-[#1e2230] rounded-xl p-6 shadow-xl relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-1.5 h-full bg-[#f39c12]" />
+              <h2 className="text-lg font-bold text-white font-display mb-1">Fulvio (Atual)</h2>
+              <span className="text-[10px] text-neutral-500 font-mono block mb-5">
+                Período: {gestores?.fulvio?.inicio} a {gestores?.fulvio?.fim} ({gestores?.fulvio?.diasAtivos} dias ativos)
+              </span>
+
+              <div className="grid grid-cols-2 gap-6 font-mono">
+                <div className="bg-neutral-950/50 p-4 rounded-lg border border-[#1e2230]/40">
+                  <span className="text-[9px] text-neutral-500 uppercase block font-bold">Investimento Total</span>
+                  <span className="text-xl font-bold text-white block mt-1">R$ {gestores?.fulvio?.investimento.toLocaleString('pt-BR')}</span>
+                </div>
+                <div className="bg-neutral-950/50 p-4 rounded-lg border border-[#1e2230]/40">
+                  <span className="text-[9px] text-neutral-500 uppercase block font-bold">Conversas (Leads)</span>
+                  <span className="text-xl font-bold text-white block mt-1">{gestores?.fulvio?.conversas.toLocaleString('pt-BR')}</span>
+                </div>
+                <div className="bg-neutral-950/50 p-4 rounded-lg border border-[#1e2230]/40">
+                  <span className="text-[9px] text-neutral-500 uppercase block font-bold">Custo por Conversa</span>
+                  <span className="text-xl font-bold text-emerald-400 block mt-1">R$ {gestores?.fulvio?.custoConversa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="bg-neutral-950/50 p-4 rounded-lg border border-[#1e2230]/40">
+                  <span className="text-[9px] text-neutral-500 uppercase block font-bold">Cliques / CPC</span>
+                  <span className="text-sm text-neutral-300 block mt-1">{gestores?.fulvio?.cliques} cliques</span>
+                  <span className="text-[10px] text-neutral-500 block">CPC: R$ {gestores?.fulvio?.cpc}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Overlap analysis Section */}
+          {gestores?.overlap && (
+            <div className="bg-[#12141c] border border-[#1e2230] rounded-xl p-6 shadow-xl space-y-4">
+              <div>
+                <h3 className="text-sm font-bold text-white font-display">Análise Comparativa em Período Concorrente</h3>
+                <p className="text-xs text-neutral-400 font-mono mt-1">
+                  Métricas isoladas exclusivamente para os **{gestores.overlap.dias} dias** em que ambos tiveram campanhas rodando simultaneamente.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Anderson stats in overlap */}
+                <div className="bg-neutral-950/30 p-4 rounded-lg border border-[#1e2230]/40 flex justify-between items-center font-mono text-xs">
+                  <div>
+                    <span className="text-[9px] text-neutral-500 font-bold block">ANDERSON (PERÍODO CONCORRENTE)</span>
+                    <span className="text-neutral-300 block mt-1">{gestores.overlap.anderson.conversas} conversas</span>
+                    <span className="text-neutral-400">R$ {gestores.overlap.anderson.investimento.toLocaleString('pt-BR')} investidos</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[9px] text-neutral-500 font-bold block">CUSTO POR LEAD</span>
+                    <span className="text-base font-bold text-[#f39c12] mt-1 block">
+                      R$ {gestores.overlap.anderson.custoConversa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Fulvio stats in overlap */}
+                <div className="bg-neutral-950/30 p-4 rounded-lg border border-[#1e2230]/40 flex justify-between items-center font-mono text-xs">
+                  <div>
+                    <span className="text-[9px] text-neutral-500 font-bold block">FULVIO (PERÍODO CONCORRENTE)</span>
+                    <span className="text-neutral-300 block mt-1">{gestores.overlap.fulvio.conversas} conversas</span>
+                    <span className="text-neutral-400">R$ {gestores.overlap.fulvio.investimento.toLocaleString('pt-BR')} investidos</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[9px] text-neutral-500 font-bold block">CUSTO POR LEAD</span>
+                    <span className="text-base font-bold text-[#f39c12] mt-1 block">
+                      R$ {gestores.overlap.fulvio.custoConversa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

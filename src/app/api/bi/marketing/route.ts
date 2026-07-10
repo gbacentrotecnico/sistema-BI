@@ -19,7 +19,7 @@ export async function GET(request: Request) {
     const prevEndDate = new Date(endDate);
     prevEndDate.setMonth(prevEndDate.getMonth() - 1);
 
-    // Buscar integrações para filtrar por Loja de forma nativa e SSOT
+    // Buscar todas as integrações
     const integrations = await prisma.integration.findMany();
     const ctIntegrationIds = integrations
       .filter(i => i.nome.toUpperCase().includes('CT') || i.nome.toUpperCase().includes('CENTRO'))
@@ -167,6 +167,79 @@ export async function GET(request: Request) {
       };
     }).sort((a, b) => b.investimento - a.investimento);
 
+    // 7. CÁLCULO DE COMPARAÇÃO DE GESTORES (Anderson vs. Fulvio)
+    // Busca todo o histórico dos dois
+    const allCampaigns = await prisma.performanceCampanha.findMany();
+
+    const calculateManagerStats = (filterIds: number[]) => {
+      const filtered = allCampaigns.filter(c => filterIds.includes(c.integrationId || 0));
+      if (filtered.length === 0) return null;
+
+      let conv = 0, cli = 0, spent = 0, imp = 0, alc = 0;
+      const dates = filtered.map(c => new Date(c.data).getTime());
+      const minDate = new Date(Math.min(...dates));
+      const maxDate = new Date(Math.max(...dates));
+
+      filtered.forEach(c => {
+        conv += c.conversoesMensagens || 0;
+        cli += c.cliquesLink || 0;
+        spent += c.valorGasto || 0;
+        imp += c.impressoes || 0;
+        alc += c.alcance || 0;
+      });
+
+      const uniqueDays = new Set(filtered.map(c => new Date(c.data).toDateString())).size;
+
+      return {
+        conversas: conv,
+        cliques: cli,
+        investimento: Number(spent.toFixed(2)),
+        custoConversa: conv > 0 ? Number((spent / conv).toFixed(2)) : 0,
+        cpc: cli > 0 ? Number((spent / cli).toFixed(2)) : 0,
+        diasAtivos: uniqueDays,
+        inicio: minDate.toLocaleDateString('pt-BR'),
+        fim: maxDate.toLocaleDateString('pt-BR')
+      };
+    };
+
+    const andersonStats = calculateManagerStats(ctIntegrationIds);
+    const fulvioStats = calculateManagerStats(mecIntegrationIds);
+
+    // Período Concorrente (Overlap)
+    const andersonDays = new Set(allCampaigns.filter(c => ctIntegrationIds.includes(c.integrationId || 0)).map(c => new Date(c.data).toDateString()));
+    const fulvioDays = new Set(allCampaigns.filter(c => mecIntegrationIds.includes(c.integrationId || 0)).map(c => new Date(c.data).toDateString()));
+    const overlapDays = Array.from(andersonDays).filter(d => fulvioDays.has(d));
+
+    let overlapAndersonConv = 0, overlapAndersonSpent = 0;
+    let overlapFulvioConv = 0, overlapFulvioSpent = 0;
+
+    allCampaigns.forEach(c => {
+      const dateStr = new Date(c.data).toDateString();
+      if (overlapDays.includes(dateStr)) {
+        if (ctIntegrationIds.includes(c.integrationId || 0)) {
+          overlapAndersonConv += c.conversoesMensagens || 0;
+          overlapAndersonSpent += c.valorGasto || 0;
+        } else if (mecIntegrationIds.includes(c.integrationId || 0)) {
+          overlapFulvioConv += c.conversoesMensagens || 0;
+          overlapFulvioSpent += c.valorGasto || 0;
+        }
+      }
+    });
+
+    const overlapStats = overlapDays.length > 0 ? {
+      dias: overlapDays.length,
+      anderson: {
+        conversas: overlapAndersonConv,
+        investimento: Number(overlapAndersonSpent.toFixed(2)),
+        custoConversa: overlapAndersonConv > 0 ? Number((overlapAndersonSpent / overlapAndersonConv).toFixed(2)) : 0
+      },
+      fulvio: {
+        conversas: overlapFulvioConv,
+        investimento: Number(overlapFulvioSpent.toFixed(2)),
+        custoConversa: overlapFulvioConv > 0 ? Number((overlapFulvioSpent / overlapFulvioConv).toFixed(2)) : 0
+      }
+    } : null;
+
     return NextResponse.json({
       success: true,
       summary: {
@@ -192,7 +265,12 @@ export async function GET(request: Request) {
         diffInvestimento: Number(getDiff(totalInvestimento, prevTotalInvestimento).toFixed(1))
       },
       dailyData: Array.from(dailyMap.values()),
-      tableData
+      tableData,
+      gestores: {
+        anderson: andersonStats,
+        fulvio: fulvioStats,
+        overlap: overlapStats
+      }
     });
 
   } catch (error: any) {

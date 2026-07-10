@@ -26,7 +26,7 @@ export default function Sidebar() {
   const menuItems = [
     { label: 'Geral', icon: '📊', href: '/' },
     { label: 'Marketing', icon: '📢', href: '/marketing-campanhas' },
-    { label: 'Reativação de Base', icon: '🔁', href: '/marketing' },
+    { label: 'Re-Marketing', icon: '🔁', href: '/marketing' },
     { label: 'Atendimento', icon: '💬', href: '/atendimento' },
     { label: 'Vendas', icon: '💰', href: '/vendas' },
     { label: 'RH', icon: '👥', href: '/rh', disabled: true },

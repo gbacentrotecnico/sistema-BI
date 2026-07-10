@@ -4,12 +4,19 @@ import React, { useState, useEffect, useCallback } from 'react';
 
 interface SummaryObj {
   totalConversas: number;
+  diffConversas: number;
   custoMedioConversa: number;
+  diffCustoConversa: number;
   totalCliques: number;
+  diffCliques: number;
   cpcMedio: number;
+  diffCpc: number;
   totalAlcance: number;
+  diffAlcance: number;
   totalImpressoes: number;
+  diffImpressoes: number;
   totalInvestimento: number;
+  diffInvestimento: number;
 }
 
 interface DailyRecord {
@@ -35,7 +42,7 @@ interface TableRecord {
 export default function MarketingCampanhasPage() {
   const [startDate, setStartDate] = useState('2026-07-01');
   const [endDate, setEndDate] = useState('2026-07-10');
-  const [storeFilter, setStoreFilter] = useState<'all' | 'mecanica' | 'ct'>('mecanica'); // Default to Mecânica as shown in user image
+  const [storeFilter, setStoreFilter] = useState<'all' | 'mecanica' | 'ct'>('mecanica');
   
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<SummaryObj | null>(null);
@@ -63,7 +70,28 @@ export default function MarketingCampanhasPage() {
     loadData();
   }, [loadData]);
 
-  // Encontra valores máximos para escalar os gráficos SVG de forma dinâmica
+  // Helper to render variance badge
+  const renderBadge = (value: number, invertSemantics = false) => {
+    if (value === 0) {
+      return (
+        <span className="text-[10px] text-neutral-500 font-mono mt-1 flex items-center gap-0.5">
+          ▬ 0.0%
+        </span>
+      );
+    }
+    const isPositive = value > 0;
+    const isGood = invertSemantics ? !isPositive : isPositive;
+    const arrow = isPositive ? '↑' : '↓';
+    const absVal = Math.abs(value).toFixed(1);
+
+    return (
+      <span className={`text-[10px] font-mono mt-1.5 flex items-center gap-0.5 font-bold ${isGood ? 'text-emerald-400' : 'text-rose-400'}`}>
+        {arrow} {isPositive ? '+' : '-'}{absVal}%
+        <span className="text-[8px] text-neutral-500 font-normal ml-0.5">vs mês anterior</span>
+      </span>
+    );
+  };
+
   const maxConversas = Math.max(...dailyData.map(d => d.conversas), 1);
   const maxCliques = Math.max(...dailyData.map(d => d.cliques), 1);
   const maxInvestimento = Math.max(...dailyData.map(d => d.investimento), 1);
@@ -71,8 +99,8 @@ export default function MarketingCampanhasPage() {
 
   return (
     <div className="p-8 sm:p-10 bg-[#0c0d12] text-neutral-200 min-h-screen font-sans space-y-8 select-none">
-      {/* 1. Header Section */}
-      <header className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 border-b border-[#1e2230]/40 pb-6">
+      {/* Header */}
+      <header className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 border-b border-[#1e2230]/45 pb-6">
         <div className="flex flex-col">
           <div className="flex items-baseline gap-3">
             <h1 className="text-3xl font-extrabold text-white font-display tracking-tight">
@@ -82,9 +110,8 @@ export default function MarketingCampanhasPage() {
           </div>
         </div>
 
-        {/* Filters Panel */}
+        {/* Filters */}
         <div className="flex flex-wrap items-center gap-4 bg-neutral-950/60 p-2.5 rounded-xl border border-[#1e2230]">
-          {/* Calendars */}
           <div className="flex items-center gap-2">
             <input
               type="date"
@@ -101,7 +128,6 @@ export default function MarketingCampanhasPage() {
             />
           </div>
 
-          {/* Unit selection toggles */}
           <div className="flex bg-[#12141c] p-1 rounded-lg border border-[#1e2230] gap-1">
             <button
               onClick={() => setStoreFilter('mecanica')}
@@ -120,85 +146,99 @@ export default function MarketingCampanhasPage() {
       </header>
 
       {loading ? (
-        <div className="text-center py-32 text-xs text-neutral-500 font-mono">Calculando métricas das campanhas...</div>
+        <div className="text-center py-32 text-xs text-neutral-500 font-mono">Calculando métricas MoM comparativas...</div>
       ) : (
         <div className="space-y-8 animate-fade-in">
-          {/* 2. KPI Cards Grid */}
+          {/* KPI Cards Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-            {/* Card 1 */}
+            {/* Conversas */}
             <div className="bg-[#12141c] border border-[#1e2230] rounded-xl p-4 shadow-lg flex flex-col justify-between hover:border-[#f39c12]/30 transition-all duration-300">
               <span className="text-[10px] uppercase font-bold text-neutral-500 tracking-wider font-mono">Conversas Iniciadas</span>
-              <span className="text-2xl font-black text-white font-mono mt-3">{summary?.totalConversas}</span>
+              <div className="mt-2.5">
+                <span className="text-2xl font-black text-white font-mono block">{summary?.totalConversas}</span>
+                {summary && renderBadge(summary.diffConversas)}
+              </div>
             </div>
 
-            {/* Card 2 */}
+            {/* Custo/Conversa */}
             <div className="bg-[#12141c] border border-[#1e2230] rounded-xl p-4 shadow-lg flex flex-col justify-between hover:border-[#f39c12]/30 transition-all duration-300">
               <span className="text-[10px] uppercase font-bold text-neutral-500 tracking-wider font-mono">Custo Médio/Conversa</span>
-              <span className="text-2xl font-black text-white font-mono mt-3">
-                R$ {summary?.custoMedioConversa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </span>
+              <div className="mt-2.5">
+                <span className="text-2xl font-black text-white font-mono block">
+                  R$ {summary?.custoMedioConversa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </span>
+                {summary && renderBadge(summary.diffCustoConversa, true)}
+              </div>
             </div>
 
-            {/* Card 3 */}
+            {/* Cliques */}
             <div className="bg-[#12141c] border border-[#1e2230] rounded-xl p-4 shadow-lg flex flex-col justify-between hover:border-[#f39c12]/30 transition-all duration-300">
               <span className="text-[10px] uppercase font-bold text-neutral-500 tracking-wider font-mono">Cliques</span>
-              <span className="text-2xl font-black text-white font-mono mt-3">{summary?.totalCliques.toLocaleString('pt-BR')}</span>
+              <div className="mt-2.5">
+                <span className="text-2xl font-black text-white font-mono block">{summary?.totalCliques.toLocaleString('pt-BR')}</span>
+                {summary && renderBadge(summary.diffCliques)}
+              </div>
             </div>
 
-            {/* Card 4 */}
+            {/* CPC */}
             <div className="bg-[#12141c] border border-[#1e2230] rounded-xl p-4 shadow-lg flex flex-col justify-between hover:border-[#f39c12]/30 transition-all duration-300">
               <span className="text-[10px] uppercase font-bold text-neutral-500 tracking-wider font-mono">Custo por Clique</span>
-              <span className="text-2xl font-black text-white font-mono mt-3">
-                R$ {summary?.cpcMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </span>
+              <div className="mt-2.5">
+                <span className="text-2xl font-black text-white font-mono block">
+                  R$ {summary?.cpcMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </span>
+                {summary && renderBadge(summary.diffCpc, true)}
+              </div>
             </div>
 
-            {/* Card 5 */}
+            {/* Alcance */}
             <div className="bg-[#12141c] border border-[#1e2230] rounded-xl p-4 shadow-lg flex flex-col justify-between hover:border-[#f39c12]/30 transition-all duration-300">
               <span className="text-[10px] uppercase font-bold text-neutral-500 tracking-wider font-mono">Alcance</span>
-              <span className="text-2xl font-black text-white font-mono mt-3">{summary?.totalAlcance.toLocaleString('pt-BR')}</span>
+              <div className="mt-2.5">
+                <span className="text-2xl font-black text-white font-mono block">{summary?.totalAlcance.toLocaleString('pt-BR')}</span>
+                {summary && renderBadge(summary.diffAlcance)}
+              </div>
             </div>
 
-            {/* Card 6 */}
+            {/* Impressões */}
             <div className="bg-[#12141c] border border-[#1e2230] rounded-xl p-4 shadow-lg flex flex-col justify-between hover:border-[#f39c12]/30 transition-all duration-300">
               <span className="text-[10px] uppercase font-bold text-neutral-500 tracking-wider font-mono">Impressões</span>
-              <span className="text-2xl font-black text-white font-mono mt-3">{summary?.totalImpressoes.toLocaleString('pt-BR')}</span>
+              <div className="mt-2.5">
+                <span className="text-2xl font-black text-white font-mono block">{summary?.totalImpressoes.toLocaleString('pt-BR')}</span>
+                {summary && renderBadge(summary.diffImpressoes)}
+              </div>
             </div>
 
-            {/* Card 7 */}
+            {/* Investimento */}
             <div className="bg-[#12141c] border border-[#1e2230] rounded-xl p-4 shadow-lg flex flex-col justify-between hover:border-[#f39c12]/30 transition-all duration-300">
               <span className="text-[10px] uppercase font-bold text-neutral-500 tracking-wider font-mono">Investimento Total</span>
-              <span className="text-2xl font-black text-abucci-gold font-mono mt-3">
-                R$ {summary?.totalInvestimento.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </span>
+              <div className="mt-2.5">
+                <span className="text-2xl font-black text-abucci-gold font-mono block">
+                  R$ {summary?.totalInvestimento.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </span>
+                {summary && renderBadge(summary.diffInvestimento)}
+              </div>
             </div>
           </div>
 
-          {/* 3. Charts Section */}
+          {/* Charts Row */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Chart 1: Conversas e Cliques */}
+            {/* Conversas e Cliques */}
             <div className="bg-[#12141c] border border-[#1e2230] rounded-xl p-6 shadow-xl space-y-4">
               <h2 className="text-sm font-bold text-white font-display">Conversas Iniciadas e Cliques no Link por Dia</h2>
               
               <div className="h-64 w-full relative flex items-end justify-between pt-8 border-b border-[#1e2230] pb-2">
                 {dailyData.map((d, idx) => {
                   const barHeight = (d.conversas / maxConversas) * 160 || 5;
-                  
-                  // Calcular pontos da linha (Cliques)
-                  const colWidthPercent = 100 / dailyData.length;
-                  const x = (idx + 0.5) * colWidthPercent;
-                  const y = 200 - (d.cliques / maxCliques) * 160;
 
                   return (
                     <div key={idx} className="flex-1 flex flex-col items-center group relative h-full justify-end">
-                      {/* Tooltip */}
                       <div className="absolute bottom-full mb-2 bg-neutral-950 border border-[#1e2230] px-3 py-1.5 rounded-lg text-[10px] font-mono opacity-0 group-hover:opacity-100 transition-opacity z-20 pointer-events-none text-left min-w-[120px] shadow-2xl">
                         <span className="font-bold text-neutral-200 block mb-1">{d.dataStr}</span>
                         <span className="text-[#f39c12] block">Conversas: {d.conversas}</span>
                         <span className="text-rose-400 block">Cliques: {d.cliques}</span>
                       </div>
 
-                      {/* Bar (Conversas Iniciadas) */}
                       <div
                         className="w-8 bg-[#f39c12]/20 border border-[#f39c12]/40 rounded-t-sm transition-all duration-300 relative group-hover:bg-[#f39c12]/35"
                         style={{ height: `${barHeight}px` }}
@@ -210,13 +250,11 @@ export default function MarketingCampanhasPage() {
                         )}
                       </div>
 
-                      {/* Label */}
                       <span className="text-[10px] text-neutral-500 font-mono mt-2 block">{d.dataStr.split('/')[0]}</span>
                     </div>
                   );
                 })}
 
-                {/* SVG Overlay Line for Cliques */}
                 <svg className="absolute inset-x-0 bottom-6 h-56 w-full pointer-events-none overflow-visible">
                   <path
                     d={dailyData.map((d, idx) => {
@@ -231,7 +269,6 @@ export default function MarketingCampanhasPage() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   />
-                  {/* Points on Line */}
                   {dailyData.map((d, idx) => {
                     const colWidth = 100 / dailyData.length;
                     const x = `${(idx + 0.5) * colWidth}%`;
@@ -250,7 +287,6 @@ export default function MarketingCampanhasPage() {
                 </svg>
               </div>
 
-              {/* Legends */}
               <div className="flex gap-4 text-[10px] font-mono font-semibold justify-center pt-2">
                 <div className="flex items-center gap-1.5">
                   <span className="w-3 h-3 bg-[#f39c12]/20 border border-[#f39c12]/40 rounded-sm" />
@@ -263,7 +299,7 @@ export default function MarketingCampanhasPage() {
               </div>
             </div>
 
-            {/* Chart 2: Investimento x Impressões */}
+            {/* Investimento x Impressões */}
             <div className="bg-[#12141c] border border-[#1e2230] rounded-xl p-6 shadow-xl space-y-4">
               <h2 className="text-sm font-bold text-white font-display">Investimento x Impressões</h2>
               
@@ -273,14 +309,12 @@ export default function MarketingCampanhasPage() {
 
                   return (
                     <div key={idx} className="flex-1 flex flex-col items-center group relative h-full justify-end">
-                      {/* Tooltip */}
                       <div className="absolute bottom-full mb-2 bg-neutral-950 border border-[#1e2230] px-3 py-1.5 rounded-lg text-[10px] font-mono opacity-0 group-hover:opacity-100 transition-opacity z-20 pointer-events-none text-left min-w-[120px] shadow-2xl">
                         <span className="font-bold text-neutral-200 block mb-1">{d.dataStr}</span>
                         <span className="text-emerald-400 block">Investimento: R$ {d.investimento.toFixed(2)}</span>
                         <span className="text-blue-400 block">Impressões: {d.impressoes.toLocaleString()}</span>
                       </div>
 
-                      {/* Bar (Investimento) */}
                       <div
                         className="w-8 bg-rose-950/40 border border-rose-800/40 rounded-t-sm transition-all duration-300 relative group-hover:bg-rose-900/50"
                         style={{ height: `${barHeight}px` }}
@@ -292,13 +326,11 @@ export default function MarketingCampanhasPage() {
                         )}
                       </div>
 
-                      {/* Label */}
                       <span className="text-[10px] text-neutral-500 font-mono mt-2 block">{d.dataStr.split('/')[0]}</span>
                     </div>
                   );
                 })}
 
-                {/* SVG Overlay Line for Impressões */}
                 <svg className="absolute inset-x-0 bottom-6 h-56 w-full pointer-events-none overflow-visible">
                   <path
                     d={dailyData.map((d, idx) => {
@@ -313,7 +345,6 @@ export default function MarketingCampanhasPage() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   />
-                  {/* Points on Line */}
                   {dailyData.map((d, idx) => {
                     const colWidth = 100 / dailyData.length;
                     const x = `${(idx + 0.5) * colWidth}%`;
@@ -332,7 +363,6 @@ export default function MarketingCampanhasPage() {
                 </svg>
               </div>
 
-              {/* Legends */}
               <div className="flex gap-4 text-[10px] font-mono font-semibold justify-center pt-2">
                 <div className="flex items-center gap-1.5">
                   <span className="w-3 h-3 bg-rose-900/40 border border-rose-800/40 rounded-sm" />
@@ -346,7 +376,7 @@ export default function MarketingCampanhasPage() {
             </div>
           </div>
 
-          {/* 4. Table Section */}
+          {/* Table */}
           <div className="bg-[#12141c] border border-[#1e2230] rounded-xl shadow-xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">

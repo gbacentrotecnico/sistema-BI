@@ -291,11 +291,11 @@ export default function MarketingCampaignsPage() {
             <div className="flex items-center gap-2">
               <span className="font-display font-bold text-base tracking-wider text-neutral-100 uppercase">GRUPO ABUCCI</span>
               <span className="text-[10px] text-abucci-gold bg-abucci-gold/10 border border-abucci-gold/20 px-2 py-0.5 rounded font-mono font-medium">
-                MARKETING ENGINE
+                REATIVAÇÃO DE BASE
               </span>
             </div>
             <span className="text-xs text-neutral-400 font-mono tracking-widest uppercase mt-0.5">
-              Campanhas Operacionais & Sincronização VPS
+              Fidelização de Clientes & Sincronização Chatwoot
             </span>
           </div>
         </div>

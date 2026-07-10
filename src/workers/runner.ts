@@ -8,7 +8,7 @@ import { MetaAdsAdapter } from '@/integrations/meta_ads/MetaAdsAdapter';
 
 // Registro manual para garantir que o adaptador esteja disponível
 IntegrationRegistry.register('CHATWOOT', new ChatwootAdapter());
-IntegrationRegistry.register('meta_ads', new MetaAdsAdapter());
+IntegrationRegistry.register('META_ADS', new MetaAdsAdapter());
 
 
 const engine = new WorkerEngine('NodeDaemon-01');
